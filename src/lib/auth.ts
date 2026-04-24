@@ -4,6 +4,7 @@ import { prisma } from "./db";
 import { verifyPassword } from "./crypto";
 import { LoginSchema } from "@/utils/validation";
 import { env } from "./env";
+import { authConfig } from "./auth.config";
 
 declare module "next-auth" {
   interface Session {
@@ -28,14 +29,11 @@ declare module "next-auth" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   secret: env().AUTH_SECRET,
-  trustHost: true,
   session: {
     strategy: "jwt",
     maxAge: env().AUTH_SESSION_MAX_AGE,
-  },
-  pages: {
-    signIn: "/login",
   },
   providers: [
     Credentials({

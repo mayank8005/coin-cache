@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
 
-export default auth((req) => {
+export const { auth: middleware } = NextAuth(authConfig);
+
+export default middleware((req) => {
   const { pathname } = req.nextUrl;
   const isPublic =
     pathname.startsWith("/login") ||
@@ -15,14 +17,13 @@ export default auth((req) => {
     pathname === "/sw.js" ||
     pathname === "/favicon.ico";
 
-  if (isPublic) return NextResponse.next();
+  if (isPublic) return;
   if (!req.auth) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    return Response.redirect(url);
   }
-  return NextResponse.next();
 });
 
 export const config = {
