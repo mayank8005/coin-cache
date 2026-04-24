@@ -1,0 +1,116 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  initials     String
+  color        String   @default("#3F6B3A")
+  paletteId    String   @default("matcha")
+  vizStyle     String   @default("rings") // "rings" | "pie"
+  chipStyle    String   @default("rings") // "rings" | "pill" | "block" | "mono"
+  currency     String   @default("INR") // "INR" | "USD"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accounts      Account[]
+  categories    Category[]
+  transactions  Transaction[]
+  insightCache  InsightCache[]
+
+  @@index([email])
+}
+
+model Account {
+  id          String   @id
+  userId      String
+  label       String
+  kind        String // "current" | "credit" | "savings" | "cash"
+  mono        String
+  last4Enc    String? // AES-GCM ciphertext (nonce||ct||tag, base64)
+  colorHex    String
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
+model Category {
+  id                 String   @id
+  userId             String
+  label              String
+  mono               String
+  iconId             String
+  colorHex           String
+  kind               String // "expense" | "income"
+  monthlyBudgetMinor Int?
+  archived           Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
+model Transaction {
+  id             String   @id
+  userId         String
+  accountId      String
+  categoryId     String
+  amountMinor    Int
+  note           String   @default("")
+  occurredAt     DateTime
+  kind           String // "expense" | "income"
+  aiCategorized  Boolean  @default(false)
+  aiConfidence   Float?
+  flagged        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account  Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([userId, occurredAt])
+  @@index([accountId])
+  @@index([categoryId])
+}
+
+model InsightCache {
+  id           String   @id
+  userId       String
+  period       String // "week" | "month"
+  payload      String // JSON string
+  generatedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period])
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id
+  actor     String // "admin" | userId
+  action    String
+  target    String?
+  meta      String? // JSON string
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

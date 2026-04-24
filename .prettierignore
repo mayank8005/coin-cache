@@ -1,0 +1,8 @@
+.next
+node_modules
+pnpm-lock.yaml
+public/sw.js
+public/sw.js.map
+design-reference
+data
+prisma/migrations

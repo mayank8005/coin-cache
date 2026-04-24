@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Fallback tokens (Matcha) — replaced at runtime by <html style={...}> */
+    --bg: #f2f0e6;
+    --surface: #fffdf4;
+    --surface2: #e8e5d6;
+    --line: rgba(20, 24, 18, 0.1);
+    --lineStrong: rgba(20, 24, 18, 0.22);
+    --fg: #141812;
+    --fgMuted: rgba(20, 24, 18, 0.62);
+    --fgDim: rgba(20, 24, 18, 0.38);
+    --accent: #3f6b3a;
+    --accentInk: #f2f0e6;
+    --pos: #3f6b3a;
+    --neg: #b73a20;
+    --aiTint: rgba(63, 107, 58, 0.06);
+    --aiLine: rgba(63, 107, 58, 0.5);
+
+    --font-display: "General Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  html,
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-display);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  .font-mono,
+  code,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @keyframes aishimmer {
+    0% {
+      background-position: 200% 50%;
+    }
+    100% {
+      background-position: -200% 50%;
+    }
+  }
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20%,
+    60% {
+      transform: translateX(-6px);
+    }
+    40%,
+    80% {
+      transform: translateX(6px);
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      box-shadow: 0 10px 30px -6px color-mix(in oklab, var(--accent) 33%, transparent);
+    }
+    50% {
+      box-shadow: 0 14px 36px -6px color-mix(in oklab, var(--accent) 48%, transparent);
+    }
+  }
+}
+
+@layer components {
+  .txt-mono-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fgMuted);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+
+  .card-sunk {
+    background: var(--surface2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+
+  .ai-shimmer {
+    background: linear-gradient(90deg, var(--fg), var(--aiLine), var(--fg));
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: aishimmer 3s linear infinite;
+  }
+}
+
+/* Fonts — self-hosted via /public/fonts. Weight files populated at deploy time; @font-face is graceful if missing. */
+@font-face {
+  font-family: "General Sans";
+  src: url("/fonts/GeneralSans-Variable.woff2") format("woff2-variations");
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-Variable.woff2") format("woff2-variations");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
