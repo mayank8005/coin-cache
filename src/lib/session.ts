@@ -1,13 +1,14 @@
 import { auth } from "./auth";
+import type { ChipStyle, CurrencyCode, PaletteId, VizStyle } from "@/types/design";
 
 export interface SessionUser {
   id: string;
   email: string;
   displayName: string;
-  paletteId: string;
-  vizStyle: string;
-  chipStyle: string;
-  currency: string;
+  paletteId: PaletteId;
+  vizStyle: VizStyle;
+  chipStyle: ChipStyle;
+  currency: CurrencyCode;
 }
 
 export const requireUser = async (): Promise<SessionUser> => {
@@ -19,10 +20,10 @@ export const requireUser = async (): Promise<SessionUser> => {
     id: session.user.id,
     email: session.user.email,
     displayName: session.user.displayName,
-    paletteId: session.user.paletteId,
-    vizStyle: session.user.vizStyle,
-    chipStyle: session.user.chipStyle,
-    currency: session.user.currency,
+    paletteId: session.user.paletteId as PaletteId,
+    vizStyle: session.user.vizStyle as VizStyle,
+    chipStyle: session.user.chipStyle as ChipStyle,
+    currency: session.user.currency as CurrencyCode,
   };
 };
 
@@ -33,10 +34,10 @@ export const getSessionUser = async (): Promise<SessionUser | null> => {
     id: session.user.id,
     email: session.user.email,
     displayName: session.user.displayName,
-    paletteId: session.user.paletteId,
-    vizStyle: session.user.vizStyle,
-    chipStyle: session.user.chipStyle,
-    currency: session.user.currency,
+    paletteId: session.user.paletteId as PaletteId,
+    vizStyle: session.user.vizStyle as VizStyle,
+    chipStyle: session.user.chipStyle as ChipStyle,
+    currency: session.user.currency as CurrencyCode,
   };
 };
 
