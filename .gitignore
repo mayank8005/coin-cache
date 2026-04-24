@@ -39,3 +39,4 @@ public/workbox-*.js.map
 
 design-reference/bundle.gz
 design-reference/bundle
+tsconfig.tsbuildinfo
