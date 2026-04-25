@@ -58,7 +58,13 @@ export function CategoryChip({
             <CategoryIcon id={cat.iconId} size={12} color="currentColor" />
           )}
         </span>
-        <span className="text-[12px] font-medium">{cat.label}</span>
+        <span
+          className="truncate text-[12px] font-medium"
+          style={{ maxWidth: 140 }}
+          title={cat.label}
+        >
+          {cat.label}
+        </span>
         {aiHint ? <span className="font-mono text-[9px] text-ai-line">··</span> : null}
       </button>
     );
@@ -83,7 +89,20 @@ export function CategoryChip({
         ) : (
           <CategoryIcon id={cat.iconId} size={22} />
         )}
-        <span className="text-[11px] font-medium">{cat.label}</span>
+        <span
+          className="text-[11px] font-medium leading-tight"
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            wordBreak: "break-word",
+            textAlign: "center",
+          }}
+          title={cat.label}
+        >
+          {cat.label}
+        </span>
       </button>
     );
   }
@@ -169,8 +188,17 @@ export function CategoryChip({
         ) : null}
       </span>
       <span
-        className={cn("text-[11px] font-medium")}
-        style={{ color: selected ? "var(--fg)" : "var(--fgMuted)" }}
+        className={cn("text-[11px] font-medium leading-tight text-center")}
+        style={{
+          color: selected ? "var(--fg)" : "var(--fgMuted)",
+          maxWidth: size + 8,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+          wordBreak: "break-word",
+        }}
+        title={cat.label}
       >
         {cat.label}
       </span>

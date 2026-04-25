@@ -32,6 +32,7 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
   const [flagged, setFlagged] = useState<boolean>(txn.flagged);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAllCats, setShowAllCats] = useState(false);
 
   const update = useUpdateTransaction();
   const del = useDeleteTransaction();
@@ -45,6 +46,16 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
   }, [onClose]);
 
   const filteredCats = useMemo(() => categories.filter((c) => c.kind === kind), [categories, kind]);
+  const CAT_COLLAPSE_LIMIT = 8;
+  const visibleCats = useMemo(() => {
+    if (showAllCats || filteredCats.length <= CAT_COLLAPSE_LIMIT) return filteredCats;
+    const head = filteredCats.slice(0, CAT_COLLAPSE_LIMIT);
+    const selected = catId ? filteredCats.find((c) => c.id === catId) : null;
+    if (selected && !head.some((c) => c.id === selected.id)) {
+      return [...head.slice(0, CAT_COLLAPSE_LIMIT - 1), selected];
+    }
+    return head;
+  }, [filteredCats, showAllCats, catId]);
   const symbol = CURRENCIES[currency].symbol;
   const amountNum = Number(amountStr) || 0;
   const amountMinor = toMinor(amountNum, currency);
@@ -210,9 +221,20 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
 
           {/* Category */}
           <div>
-            <div className="mb-1 txt-mono-label">category</div>
+            <div className="mb-1 flex items-center justify-between">
+              <span className="txt-mono-label">category</span>
+              {filteredCats.length > CAT_COLLAPSE_LIMIT ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllCats((v) => !v)}
+                  className="font-mono text-[10px] uppercase tracking-wider text-fg-dim"
+                >
+                  {showAllCats ? "show less" : `show all (${filteredCats.length})`}
+                </button>
+              ) : null}
+            </div>
             <div className="flex flex-wrap gap-1.5">
-              {filteredCats.map((c) => {
+              {visibleCats.map((c) => {
                 const sel = catId === c.id;
                 return (
                   <button
@@ -223,12 +245,16 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
                       "flex items-center gap-2 rounded-pill border px-3 py-1.5 text-[12px] font-medium",
                       sel ? "border-transparent bg-fg text-bg" : "border-line-strong text-fg-muted",
                     )}
+                    style={{ maxWidth: "100%" }}
+                    title={c.label}
                   >
                     <span
-                      className="inline-block h-2 w-2 rounded-full"
+                      className="inline-block h-2 w-2 shrink-0 rounded-full"
                       style={{ background: c.colorHex }}
                     />
-                    {c.label}
+                    <span className="truncate" style={{ maxWidth: 180 }}>
+                      {c.label}
+                    </span>
                   </button>
                 );
               })}

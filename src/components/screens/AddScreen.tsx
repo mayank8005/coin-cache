@@ -32,6 +32,17 @@ export function AddScreen({ kind, categories, accounts, currency, chipStyle, chi
   const [nlText, setNlText] = useState("");
   const [showNl, setShowNl] = useState(false);
   const [aiFlag, setAiFlag] = useState<{ conf: number; source: "nl" } | null>(null);
+  const [showAllCats, setShowAllCats] = useState(false);
+  const CAT_COLLAPSE_LIMIT = 8;
+  const visibleCats = useMemo(() => {
+    if (showAllCats || filteredCats.length <= CAT_COLLAPSE_LIMIT) return filteredCats;
+    const head = filteredCats.slice(0, CAT_COLLAPSE_LIMIT);
+    const selected = catId ? filteredCats.find((c) => c.id === catId) : null;
+    if (selected && !head.some((c) => c.id === selected.id)) {
+      return [...head.slice(0, CAT_COLLAPSE_LIMIT - 1), selected];
+    }
+    return head;
+  }, [filteredCats, showAllCats, catId]);
 
   const create = useCreateTransaction();
   const parseNl = useNlParse();
@@ -209,10 +220,34 @@ export function AddScreen({ kind, categories, accounts, currency, chipStyle, chi
 
       {/* Categories */}
       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-2">
-        <div className="mb-2 txt-mono-label">category</div>
-        <div className="grid grid-cols-4 gap-x-2 gap-y-3">
-          {filteredCats.map((c) => (
-            <div key={c.id} className="flex justify-center">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="txt-mono-label">category</span>
+          {filteredCats.length > CAT_COLLAPSE_LIMIT ? (
+            <button
+              type="button"
+              onClick={() => setShowAllCats((v) => !v)}
+              className="font-mono text-[10px] uppercase tracking-wider text-fg-dim"
+            >
+              {showAllCats ? "show less" : `show all (${filteredCats.length})`}
+            </button>
+          ) : null}
+        </div>
+        <div
+          className={
+            chipStyle === "mono"
+              ? "flex flex-col"
+              : chipStyle === "pill"
+                ? "flex flex-wrap gap-2"
+                : "grid grid-cols-4 gap-x-2 gap-y-3"
+          }
+        >
+          {visibleCats.map((c) => (
+            <div
+              key={c.id}
+              className={
+                chipStyle === "pill" || chipStyle === "mono" ? "" : "flex justify-center"
+              }
+            >
               <CategoryChip
                 cat={c}
                 selected={catId === c.id}
