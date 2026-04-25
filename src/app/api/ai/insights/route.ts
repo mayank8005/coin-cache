@@ -39,27 +39,40 @@ export const GET = (req: Request): Promise<NextResponse> =>
       return ok(payload);
     }
     const catMap = new Map(cats.map((c) => [c.id, c.label]));
-    const totals = new Map<string, number>();
+    const expenseTotals = new Map<string, number>();
+    const incomeTotals = new Map<string, number>();
     let spent = 0;
     let income = 0;
     for (const t of txns) {
       const amt = t.amountMinor;
-      if (t.kind === "expense") spent += amt;
-      else income += amt;
-      const key = t.categoryId;
-      totals.set(key, (totals.get(key) ?? 0) + (t.kind === "expense" ? amt : 0));
+      if (t.kind === "expense") {
+        spent += amt;
+        expenseTotals.set(t.categoryId, (expenseTotals.get(t.categoryId) ?? 0) + amt);
+      } else {
+        income += amt;
+        incomeTotals.set(t.categoryId, (incomeTotals.get(t.categoryId) ?? 0) + amt);
+      }
     }
-    const summaryLines = [...totals.entries()]
+    const fmt = (n: number): string => formatAmount(n, u.currency as CurrencyCode);
+    const expenseLines = [...expenseTotals.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([cid, v]) => `- ${catMap.get(cid) ?? cid}: ${fmt(v)}`);
+    const incomeLines = [...incomeTotals.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6)
-      .map(([cid, v]) => `- ${catMap.get(cid) ?? cid}: ${formatAmount(v, u.currency as CurrencyCode)}`);
+      .map(([cid, v]) => `- ${catMap.get(cid) ?? cid}: ${fmt(v)}`);
     const userMsg = [
       `Period: last ${windowDays} days`,
-      `Total spent: ${formatAmount(spent, u.currency as CurrencyCode)}`,
-      `Total income: ${formatAmount(income, u.currency as CurrencyCode)}`,
-      `Transaction count: ${txns.length}`,
-      `Top categories:`,
-      ...summaryLines,
+      `Total expenses: ${fmt(spent)} (${txns.filter((t) => t.kind === "expense").length} transactions)`,
+      `Total income: ${fmt(income)} (${txns.filter((t) => t.kind === "income").length} transactions)`,
+      `Net: ${fmt(income - spent)}`,
+      ``,
+      `Expense breakdown by category:`,
+      ...(expenseLines.length > 0 ? expenseLines : ["- (none)"]),
+      ``,
+      `Income breakdown by category:`,
+      ...(incomeLines.length > 0 ? incomeLines : ["- (none)"]),
     ].join("\n");
 
     try {

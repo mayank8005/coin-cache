@@ -29,6 +29,7 @@ Output ONLY a JSON object with these keys:
 
 Rules:
 - Reference categories by their label; never invent categories not in the input.
+- Treat the provided breakdown as ground truth. Do NOT claim a category was "not recorded" if it appears in the breakdown — every line item shown is already recorded. The "Income breakdown" section lists every income source the user logged.
 - Use ${currency} symbol or code beside numbers; round to whole units (no fractional cents).
 - No moralising, no emojis, no markdown, no fences. Plain prose.
 - If the data is sparse (few transactions or only income), say so honestly in summary and keep narrative short.

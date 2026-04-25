@@ -9,7 +9,7 @@ interface Props {
   aiOnline?: boolean;
 }
 
-type Status = "idle" | "thinking" | "saved" | "offline" | "error";
+type Status = "idle" | "thinking" | "saved" | "offline" | "error" | "no_amount";
 
 export function BottomDock({ aiOnline = false }: Props) {
   const router = useRouter();
@@ -29,11 +29,21 @@ export function BottomDock({ aiOnline = false }: Props) {
     setStatus("thinking");
     try {
       const res = await parse.mutateAsync({ text: value });
-      if (res.offline || !res.parsed) {
+      if (res.offline) {
         setStatus("offline");
         return;
       }
+      if (!res.parsed) {
+        setStatus("no_amount");
+        setTimeout(() => setStatus("idle"), 3500);
+        return;
+      }
       const p = res.parsed;
+      if (!p.amountMinor || p.amountMinor <= 0) {
+        setStatus("no_amount");
+        setTimeout(() => setStatus("idle"), 3500);
+        return;
+      }
       const fallbackAcct = accounts.data?.[0]?.id ?? "";
       await create.mutateAsync({
         accountId: p.accountId ?? fallbackAcct,
@@ -64,7 +74,9 @@ export function BottomDock({ aiOnline = false }: Props) {
           ? "ai offline"
           : status === "error"
             ? "could not save"
-            : "tap to add";
+            : status === "no_amount"
+              ? "include an amount, e.g. \"lunch 14\""
+              : "tap to add";
 
   return (
     <div
