@@ -17,11 +17,24 @@ const EnvSchema = z.object({
 
 export type AppEnv = z.infer<typeof EnvSchema>;
 
+// Next.js page-data collection runs during `next build` and imports route
+// modules, which transitively call env(). Real secrets aren't (and shouldn't
+// be) baked into the image, so during the build phase we satisfy the schema
+// with obvious placeholders. Runtime is a fresh process and reads real values
+// from the docker-compose env_file.
+const BUILD_PLACEHOLDERS: Record<string, string> = {
+  DATABASE_URL: "file:/tmp/build.db",
+  AUTH_SECRET: "build-time-placeholder-replaced-at-runtime",
+  ENCRYPTION_KEY: "build-time-placeholder-replaced-at-runtime",
+};
+
 let cached: AppEnv | null = null;
 
 export const env = (): AppEnv => {
   if (cached) return cached;
-  const parsed = EnvSchema.safeParse(process.env);
+  const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+  const source = isBuildPhase ? { ...BUILD_PLACEHOLDERS, ...process.env } : process.env;
+  const parsed = EnvSchema.safeParse(source);
   if (!parsed.success) {
     console.error("Invalid environment variables:", parsed.error.flatten().fieldErrors);
     throw new Error("Invalid environment configuration");
