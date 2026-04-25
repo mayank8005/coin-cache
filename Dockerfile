@@ -34,11 +34,16 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=build /app/node_modules/prisma ./node_modules/prisma
+
+# @prisma/client + generated client are already bundled inside .next/standalone
+# (under node_modules/.pnpm/...). Install only the prisma CLI in an isolated
+# dir for the entrypoint's `migrate deploy`, so it doesn't collide with pnpm's
+# layout in the standalone bundle.
+RUN mkdir -p /opt/prisma-cli && cd /opt/prisma-cli \
+    && npm install --no-save --no-audit --no-fund --silent prisma@5.22.0
+
 COPY scripts/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh && mkdir -p /app/data && chown -R app:app /app
+RUN chmod +x /usr/local/bin/entrypoint.sh && mkdir -p /app/data && chown -R app:app /app /opt/prisma-cli
 
 USER app
 EXPOSE 3000
