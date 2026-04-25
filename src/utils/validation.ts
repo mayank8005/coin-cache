@@ -132,6 +132,20 @@ export const NlParseSchema = z.object({
   text: z.string().min(1).max(400),
 });
 
+export const ImportRowSchema = z.object({
+  date: z.string().min(1),
+  account: z.string().min(1).max(64),
+  category: z.string().min(1).max(64),
+  amount: z.number().finite(),
+  description: z.string().max(240).optional().default(""),
+});
+export type ImportRow = z.infer<typeof ImportRowSchema>;
+
+export const ImportTransactionsSchema = z.object({
+  rows: z.array(ImportRowSchema).min(1).max(200),
+  dateFormat: z.enum(["mdy", "dmy", "ymd"]).optional().default("mdy"),
+});
+
 export const ParsedTransactionSchema = z.object({
   amountMinor: z.number().int().nonnegative(),
   categoryId: z.string(),

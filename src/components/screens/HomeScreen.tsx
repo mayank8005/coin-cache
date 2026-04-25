@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { AccountDto, CategoryDto, TransactionDto } from "@/lib/dto";
 import type { ChipRep, CurrencyCode, VizStyle } from "@/types/design";
 import { HeaderPill } from "@/components/layout/HeaderPill";
 import { BottomDock } from "@/components/layout/BottomDock";
 import { InsightsPanel } from "@/components/layout/InsightsPanel";
+import { TransactionEditSheet } from "@/components/layout/TransactionEditSheet";
 import { Amount } from "@/components/primitives/Amount";
 import { TxnRow } from "@/components/primitives/TxnRow";
 import { CategoryViz } from "@/components/viz/CategoryViz";
@@ -35,6 +36,7 @@ export function HomeScreen({
 }: Props) {
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const acctMap = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { spent, income, totals } = useMemo(() => {
     let s = 0;
@@ -67,7 +69,7 @@ export function HomeScreen({
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const dayOfMonth = now.getDate();
 
-  const recent = transactions.slice(0, 5);
+  const recent = transactions.slice(0, 6);
 
   const monthName = now.toLocaleString("en-US", { month: "long" });
   const weekOfMonth = Math.ceil(now.getDate() / 7);
@@ -94,7 +96,7 @@ export function HomeScreen({
           <div>
             <div className="txt-mono-label">Spent this month</div>
             <Amount minor={spent} size={26} currency={currency} tone="fg" />
-            <div className="mt-0.5 txt-mono-label">
+            <div className="mt-0.5 txt-mono-label" suppressHydrationWarning>
               day {dayOfMonth} of {daysInMonth}
             </div>
           </div>
@@ -138,6 +140,7 @@ export function HomeScreen({
                   ai={t.aiCategorized}
                   aiConfidence={t.aiConfidence}
                   currency={currency}
+                  onClick={() => setEditingId(t.id)}
                 />
               );
             })
@@ -152,6 +155,22 @@ export function HomeScreen({
       </section>
 
       <BottomDock aiOnline={aiOnline} />
+
+      {editingId
+        ? (() => {
+            const editing = transactions.find((t) => t.id === editingId);
+            if (!editing) return null;
+            return (
+              <TransactionEditSheet
+                txn={editing}
+                categories={categories}
+                accounts={accounts}
+                currency={currency}
+                onClose={() => setEditingId(null)}
+              />
+            );
+          })()
+        : null}
     </div>
   );
 }

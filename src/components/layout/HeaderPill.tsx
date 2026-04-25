@@ -15,6 +15,7 @@ export function HeaderPill({ name, period, onlineAi }: Props) {
         <div
           className="font-mono uppercase"
           style={{ fontSize: 10, color: "var(--fgDim)", letterSpacing: "0.14em" }}
+          suppressHydrationWarning
         >
           {period}
         </div>

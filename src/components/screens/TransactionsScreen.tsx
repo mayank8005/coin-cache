@@ -6,6 +6,7 @@ import type { AccountDto, CategoryDto, TransactionDto } from "@/lib/dto";
 import type { ChipRep, CurrencyCode } from "@/types/design";
 import { TxnRow } from "@/components/primitives/TxnRow";
 import { BottomDock } from "@/components/layout/BottomDock";
+import { TransactionEditSheet } from "@/components/layout/TransactionEditSheet";
 import { useTransactions } from "@/hooks/api";
 import { formatAmount, formatDayHeader } from "@/utils/format";
 import { cn } from "@/utils/cn";
@@ -31,6 +32,7 @@ export function TransactionsScreen({
   const [monthOffset, setMonthOffset] = useState(0);
   const [filter, setFilter] = useState<FilterKind>("all");
   const [acctId, setAcctId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { from, to, isCurrent } = useMemo(() => {
     const now = new Date();
@@ -170,7 +172,9 @@ export function TransactionsScreen({
           groups.map((g) => (
             <div key={g.date.toISOString()} className="mb-4">
               <div className="mb-1 flex items-center justify-between px-1">
-                <span className="txt-mono-label">{formatDayHeader(g.date)}</span>
+                <span className="txt-mono-label" suppressHydrationWarning>
+                  {formatDayHeader(g.date)}
+                </span>
                 <span
                   className="font-mono text-[11px] tabular-nums"
                   style={{ color: g.total >= 0 ? "var(--pos)" : "var(--fgMuted)" }}
@@ -198,6 +202,7 @@ export function TransactionsScreen({
                       ai={t.aiCategorized}
                       aiConfidence={t.aiConfidence}
                       currency={currency}
+                      onClick={() => setEditingId(t.id)}
                     />
                   );
                 })}
@@ -208,6 +213,22 @@ export function TransactionsScreen({
       </section>
 
       <BottomDock />
+
+      {editingId
+        ? (() => {
+            const editing = txns.find((t) => t.id === editingId);
+            if (!editing) return null;
+            return (
+              <TransactionEditSheet
+                txn={editing}
+                categories={categories}
+                accounts={accounts}
+                currency={currency}
+                onClose={() => setEditingId(null)}
+              />
+            );
+          })()
+        : null}
     </div>
   );
 }

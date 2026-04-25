@@ -145,6 +145,35 @@ export const useDeleteTransaction = (): UseMutationResult<void, Error, string> =
   });
 };
 
+export const useUpdateTransaction = (): UseMutationResult<
+  TransactionDto,
+  Error,
+  {
+    id: string;
+    patch: Partial<{
+      accountId: string;
+      categoryId: string;
+      amountMinor: number;
+      note: string;
+      occurredAt: string;
+      kind: "expense" | "income";
+      flagged: boolean;
+    }>;
+  }
+> => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }) =>
+      (
+        await api<{ transaction: TransactionDto }>(`/api/transactions/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(patch),
+        })
+      ).transaction,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transactions"] }),
+  });
+};
+
 // -------- Settings --------
 export const useUpdateSettings = (): UseMutationResult<
   { settings: Record<string, string> },

@@ -331,6 +331,18 @@ export function SettingsScreen(initial: Props) {
             →
           </span>
         </Link>
+        <a
+          href="/import"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between rounded-md px-4 py-3"
+          style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
+        >
+          <span className="font-display text-[14px] font-medium">Import CSV</span>
+          <span className="font-mono text-[11px]" style={{ color: "var(--fgMuted)" }}>
+            ↗
+          </span>
+        </a>
       </div>
     </div>
   );

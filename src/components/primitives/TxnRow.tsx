@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { ChipRep, CurrencyCode } from "@/types/design";
 import { Amount } from "./Amount";
 import { AIMark } from "./AIMark";
@@ -20,6 +21,7 @@ interface Props {
   aiConfidence?: number | null;
   currency: CurrencyCode;
   rep?: ChipRep;
+  onClick?: () => void;
 }
 
 export function TxnRow({
@@ -36,10 +38,13 @@ export function TxnRow({
   aiConfidence,
   currency,
   rep = "mono",
+  onClick,
 }: Props) {
   const signed = kind === "income" ? amountMinor : -amountMinor;
-  return (
-    <div className="flex items-center gap-3 border-b border-line py-2 pr-3 last:border-b-0">
+  const interactive = !!onClick;
+  const className = `flex w-full items-center gap-3 border-b border-line py-2 pr-3 text-left last:border-b-0 ${interactive ? "transition-colors duration-fast hover:bg-surface2" : ""}`;
+  const children: ReactNode = (
+    <>
       <span className="flex w-[28px] items-center justify-center text-fg-muted">
         {rep === "icon" ? (
           <CategoryIcon id={categoryIconId} size={18} />
@@ -48,9 +53,7 @@ export function TxnRow({
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13px] text-fg">
-          {note || categoryLabel}
-        </div>
+        <div className="truncate text-[13px] text-fg">{note || categoryLabel}</div>
         <div className="flex items-center gap-2 text-[10px] text-fg-dim">
           <span
             className="inline-block h-[6px] w-[6px] rounded-full"
@@ -58,7 +61,9 @@ export function TxnRow({
           />
           <span className="font-mono uppercase tracking-wider">{accountLabel}</span>
           <span>·</span>
-          <span className="font-mono">{formatRelativeDate(occurredAt)}</span>
+          <span className="font-mono" suppressHydrationWarning>
+            {formatRelativeDate(occurredAt)}
+          </span>
           {ai ? (
             <>
               <span>·</span>
@@ -70,6 +75,14 @@ export function TxnRow({
         </div>
       </div>
       <Amount minor={signed} currency={currency} signed size={14} />
-    </div>
+    </>
   );
+  if (interactive) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {children}
+      </button>
+    );
+  }
+  return <div className={className}>{children}</div>;
 }
