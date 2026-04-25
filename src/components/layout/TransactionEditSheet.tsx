@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AccountDto, CategoryDto, TransactionDto } from "@/lib/dto";
 import type { CurrencyCode } from "@/types/design";
 import { CURRENCIES } from "@/constants/currencies";
@@ -37,9 +37,38 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
   const update = useUpdateTransaction();
   const del = useDeleteTransaction();
 
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const amountRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    amountRef.current?.focus();
+    amountRef.current?.select();
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const root = sheetRef.current;
+      if (!root) return;
+      const focusables = root.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (!first || !last) return;
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -105,6 +134,10 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
       onClick={onClose}
     >
       <div
+        ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit transaction"
         className="w-full max-w-[520px] rounded-t-xl lg:rounded-xl"
         style={{ background: "var(--surface)", border: "1px solid var(--line)", maxHeight: "90dvh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
@@ -160,6 +193,7 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
             <div className="flex items-center gap-2 rounded-md border border-line px-3 py-2">
               <span className="font-mono text-[14px] text-fg-muted">{symbol}</span>
               <input
+                ref={amountRef}
                 type="number"
                 inputMode="decimal"
                 step="0.01"

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TxnKind } from "@/types/design";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_SWATCHES } from "@/constants/categories";
+import { CategoryIcon } from "@/components/primitives/CategoryIcon";
 import { useCreateCategory } from "@/hooks/api";
 import { monoCodeFrom } from "@/utils/format";
 import { cn } from "@/utils/cn";
@@ -76,12 +77,14 @@ export function NewCategoryScreen() {
             key={icn}
             type="button"
             onClick={() => setIconId(icn)}
+            aria-label={icn}
+            title={icn}
             className={cn(
-              "rounded-md border py-2 font-mono text-[10px] uppercase tracking-wider transition-colors duration-med",
+              "flex aspect-square items-center justify-center rounded-md border transition-colors duration-med",
               iconId === icn ? "border-transparent bg-surface2 text-fg" : "border-line-strong text-fg-muted",
             )}
           >
-            {icn}
+            <CategoryIcon id={icn} size={20} />
           </button>
         ))}
       </div>

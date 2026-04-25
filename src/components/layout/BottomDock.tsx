@@ -109,8 +109,6 @@ export function BottomDock({ aiOnline = false }: Props) {
   };
 
   const placeholder = aiOnline ? '"lunch 14 with sara"' : "ai offline — tap + or − to add";
-  const hint =
-    status === "thinking" ? "thinking…" : status === "saved" ? "saved ✓" : "tap to add";
 
   const feedbackColor =
     feedback?.kind === "error"
@@ -212,11 +210,32 @@ export function BottomDock({ aiOnline = false }: Props) {
         <div className="flex items-center justify-between gap-4">
           <PlusMinusButton kind="minus" size={64} onClick={() => router.push("/add?kind=expense")} />
           <div
-            className="flex-1 text-center font-mono uppercase"
+            className="flex flex-1 items-center justify-center gap-1.5 font-mono uppercase"
             style={{ fontSize: 10, color: "var(--fgDim)", letterSpacing: "0.14em" }}
           >
-            {hint}
+            {status === "thinking" ? (
+              <>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    border: "1.5px solid var(--lineStrong)",
+                    borderTopColor: "var(--accent)",
+                    animation: "cc_dock_spin 0.7s linear infinite",
+                    display: "inline-block",
+                  }}
+                />
+                thinking…
+              </>
+            ) : status === "saved" ? (
+              "saved ✓"
+            ) : (
+              "tap to add"
+            )}
           </div>
+          <style>{`@keyframes cc_dock_spin { to { transform: rotate(360deg); } }`}</style>
           <PlusMinusButton kind="plus" size={72} onClick={() => router.push("/add?kind=income")} />
         </div>
       </div>

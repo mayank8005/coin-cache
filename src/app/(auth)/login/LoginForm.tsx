@@ -84,6 +84,23 @@ export function LoginForm({ next, error }: Props) {
     setPin((s) => s.slice(0, -1));
   };
 
+  useEffect(() => {
+    if (!selectedId) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        addDigit(e.key);
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        delDigit();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, pin.length, unlocked, pending]);
+
   const greeting = unlocked
     ? "·· unlocking"
     : hint ?? (pin.length === 4 ? "checking" : "enter pin");

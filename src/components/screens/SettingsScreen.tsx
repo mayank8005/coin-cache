@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ChipRep, ChipStyle, CurrencyCode, PaletteId, VizStyle } from "@/types/design";
 import { PALETTES } from "@/constants/palettes";
 import { CURRENCY_CODES } from "@/constants/currencies";
@@ -23,6 +24,7 @@ interface Props {
 
 export function SettingsScreen(initial: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState(initial.displayName);
   const [paletteId, setPaletteId] = useState<PaletteId>(initial.paletteId);
   const [vizStyle, setVizStyle] = useState<VizStyle>(initial.vizStyle);
@@ -87,7 +89,8 @@ export function SettingsScreen(initial: Props) {
         llmModel: llmModel.trim() === "" ? null : llmModel.trim(),
       });
       setStatus("saved");
-      window.location.reload();
+      await queryClient.invalidateQueries();
+      router.refresh();
     } catch {
       setStatus("error");
     }

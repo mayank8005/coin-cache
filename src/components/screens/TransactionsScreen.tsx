@@ -99,18 +99,41 @@ export function TransactionsScreen({
           type="button"
           onClick={() => setMonthOffset((m) => m - 1)}
           className="font-mono text-[14px] text-fg-muted"
+          aria-label="Previous month"
         >
           ‹
         </button>
-        <div className="font-mono text-[12px] uppercase tracking-wider">{monthLabel}</div>
+        <div
+          className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-wider transition-opacity duration-fast"
+          style={{ opacity: query.isFetching ? 0.55 : 1 }}
+          aria-live="polite"
+        >
+          {monthLabel}
+          {query.isFetching ? (
+            <span
+              aria-hidden
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                border: "1.2px solid var(--lineStrong)",
+                borderTopColor: "var(--accent)",
+                animation: "cc_month_spin 0.7s linear infinite",
+                display: "inline-block",
+              }}
+            />
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={() => setMonthOffset((m) => Math.min(0, m + 1))}
           disabled={monthOffset >= 0}
           className="font-mono text-[14px] text-fg-muted disabled:opacity-30"
+          aria-label="Next month"
         >
           ›
         </button>
+        <style>{`@keyframes cc_month_spin { to { transform: rotate(360deg); } }`}</style>
       </div>
 
       <div className="mb-3 flex gap-2 overflow-x-auto px-4 pb-1">

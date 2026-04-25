@@ -42,7 +42,7 @@ export function TxnRow({
 }: Props) {
   const signed = kind === "income" ? amountMinor : -amountMinor;
   const interactive = !!onClick;
-  const className = `flex w-full items-center gap-3 border-b border-line py-2 pr-3 text-left last:border-b-0 ${interactive ? "transition-colors duration-fast hover:bg-surface2" : ""}`;
+  const className = `flex min-h-[44px] w-full items-center gap-3 border-b border-line py-2.5 pr-3 text-left last:border-b-0 ${interactive ? "transition-colors duration-fast hover:bg-surface2" : ""}`;
   const children: ReactNode = (
     <>
       <span className="flex w-[28px] items-center justify-center text-fg-muted">
