@@ -99,6 +99,7 @@ export function BottomDock({ aiOnline = false }: Props) {
       }
       setText("");
       setStatus("saved");
+      router.refresh();
       showFeedback("ok", `Saved: ${p.note ?? value}`, 2500);
       scheduleTimeout(() => setStatus("idle"), 1600);
     } catch (err) {

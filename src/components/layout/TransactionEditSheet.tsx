@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { AccountDto, CategoryDto, TransactionDto } from "@/lib/dto";
 import type { CurrencyCode } from "@/types/design";
 import { CURRENCIES } from "@/constants/currencies";
@@ -34,6 +35,7 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
   const [error, setError] = useState<string | null>(null);
   const [showAllCats, setShowAllCats] = useState(false);
 
+  const router = useRouter();
   const update = useUpdateTransaction();
   const del = useDeleteTransaction();
 
@@ -111,6 +113,7 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
           flagged,
         },
       });
+      router.refresh();
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "save failed");
@@ -121,6 +124,7 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
     setError(null);
     try {
       await del.mutateAsync(txn.id);
+      router.refresh();
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "delete failed");
