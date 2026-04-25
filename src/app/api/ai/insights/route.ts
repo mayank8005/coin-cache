@@ -25,7 +25,14 @@ export const GET = (req: Request): Promise<NextResponse> =>
       where: { userId_period: { userId: u.id, period } },
     });
     if (cached && Date.now() - cached.generatedAt.getTime() < CACHE_TTL_MS) {
-      return ok(JSON.parse(cached.payload));
+      try {
+        const parsed = JSON.parse(cached.payload) as unknown;
+        return ok(parsed);
+      } catch {
+        await prisma.insightCache.delete({
+          where: { userId_period: { userId: u.id, period } },
+        });
+      }
     }
 
     const windowDays = period === "week" ? 7 : 30;

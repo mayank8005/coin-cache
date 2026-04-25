@@ -220,6 +220,7 @@ export function TransactionsScreen({
             if (!editing) return null;
             return (
               <TransactionEditSheet
+                key={editing.id}
                 txn={editing}
                 categories={categories}
                 accounts={accounts}

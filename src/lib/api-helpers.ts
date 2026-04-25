@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { ZodError, type ZodSchema } from "zod";
 import { UnauthorizedError, requireUser, type SessionUser } from "./session";
 
+export class NotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}
+
 export const ok = <T>(data: T, init?: ResponseInit): NextResponse =>
   NextResponse.json(data, init);
 
@@ -22,6 +29,9 @@ export const handle = async (fn: () => Promise<NextResponse>): Promise<NextRespo
     }
     if (err instanceof UnauthorizedError) {
       return bad("Unauthorized", 401);
+    }
+    if (err instanceof NotFoundError) {
+      return bad(err.message, 404);
     }
     console.error("API error:", err);
     return bad("Internal error", 500);

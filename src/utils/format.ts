@@ -21,10 +21,11 @@ export const formatAmount = (
 ): string => {
   const info = CURRENCIES[currency];
   const value = opts.abs ? Math.abs(fromMinor(minor, currency)) : fromMinor(minor, currency);
-  const digits = opts.fractionDigits ?? (Number.isInteger(value) ? 0 : 2);
+  const defaultDigits = currency === "USD" ? 2 : Number.isInteger(value) ? 0 : 2;
+  const digits = opts.fractionDigits ?? defaultDigits;
   const body = new Intl.NumberFormat(info.locale, {
     minimumFractionDigits: digits,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: Math.max(digits, 2),
     ...(opts.compact ? { notation: "compact" as const } : {}),
   }).format(Math.abs(value));
   const sign = opts.signed ? (value > 0 ? "+" : value < 0 ? "\u2212" : " ") : value < 0 ? "\u2212" : "";

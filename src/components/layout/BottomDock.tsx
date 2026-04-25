@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlusMinusButton } from "@/components/primitives/PlusMinusButton";
 import { useNlParse, useCreateTransaction, useAccounts } from "@/hooks/api";
@@ -24,11 +24,28 @@ export function BottomDock({ aiOnline = false }: Props) {
   const parse = useNlParse();
   const create = useCreateTransaction();
   const accounts = useAccounts();
+  const timeoutsRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    const set = timeoutsRef.current;
+    return () => {
+      for (const id of set) window.clearTimeout(id);
+      set.clear();
+    };
+  }, []);
+
+  const scheduleTimeout = (fn: () => void, ms: number): void => {
+    const id = window.setTimeout(() => {
+      timeoutsRef.current.delete(id);
+      fn();
+    }, ms);
+    timeoutsRef.current.add(id);
+  };
 
   const showFeedback = (kind: FeedbackKind, msg: string, autoClearMs?: number): void => {
     setFeedback({ kind, msg });
     if (autoClearMs) {
-      window.setTimeout(() => {
+      scheduleTimeout(() => {
         setFeedback((curr) => (curr && curr.msg === msg ? null : curr));
       }, autoClearMs);
     }
@@ -83,7 +100,7 @@ export function BottomDock({ aiOnline = false }: Props) {
       setText("");
       setStatus("saved");
       showFeedback("ok", `Saved: ${p.note ?? value}`, 2500);
-      window.setTimeout(() => setStatus("idle"), 1600);
+      scheduleTimeout(() => setStatus("idle"), 1600);
     } catch (err) {
       setStatus("idle");
       const msg = err instanceof Error ? err.message : "unexpected error";

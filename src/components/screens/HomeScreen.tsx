@@ -162,6 +162,7 @@ export function HomeScreen({
             if (!editing) return null;
             return (
               <TransactionEditSheet
+                key={editing.id}
                 txn={editing}
                 categories={categories}
                 accounts={accounts}

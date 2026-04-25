@@ -63,10 +63,12 @@ export const CreateAccountSchema = z.object({
 
 export const UpdateAccountSchema = CreateAccountSchema.partial();
 
+const MAX_AMOUNT_MINOR = 1_000_000_000_000;
+
 export const CreateTransactionSchema = z.object({
   accountId: z.string().min(1),
   categoryId: z.string().min(1),
-  amountMinor: z.number().int().nonnegative(),
+  amountMinor: z.number().int().nonnegative().max(MAX_AMOUNT_MINOR),
   note: z.string().max(240).optional().default(""),
   occurredAt: z.string().datetime().or(z.date()),
   kind: zTxnKind,
@@ -136,7 +138,7 @@ export const ImportRowSchema = z.object({
   date: z.string().min(1),
   account: z.string().min(1).max(64),
   category: z.string().min(1).max(64),
-  amount: z.number().finite(),
+  amount: z.number().finite().min(-1e10).max(1e10),
   description: z.string().max(240).optional().default(""),
 });
 export type ImportRow = z.infer<typeof ImportRowSchema>;
@@ -147,7 +149,7 @@ export const ImportTransactionsSchema = z.object({
 });
 
 export const ParsedTransactionSchema = z.object({
-  amountMinor: z.number().int().nonnegative(),
+  amountMinor: z.number().int().nonnegative().max(MAX_AMOUNT_MINOR),
   categoryId: z.string(),
   accountId: z.string().optional().nullable(),
   note: z.string().optional().default(""),

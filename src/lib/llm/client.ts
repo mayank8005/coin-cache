@@ -76,24 +76,34 @@ export const listModels = async (override?: LlmConfig): Promise<string[]> => {
   }
 };
 
+const HEALTH_CACHE_TTL_MS = 30_000;
+const healthCache = new Map<string, { ok: boolean; expiresAt: number }>();
+
 export const llmHealth = async (override?: LlmConfig): Promise<boolean> => {
   const cfg = resolveConfig(override);
   if (!cfg.baseUrl) return false;
+  const cacheKey = `${cfg.baseUrl}::${cfg.apiKey ?? ""}`;
+  const now = Date.now();
+  const hit = healthCache.get(cacheKey);
+  if (hit && hit.expiresAt > now) return hit.ok;
   const e = env();
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), e.LLM_HEALTH_TIMEOUT_MS);
+  let ok = false;
   try {
     const res = await fetch(`${cfg.baseUrl}/models`, {
       method: "GET",
       headers: cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {},
       signal: ctrl.signal,
     });
-    return res.ok;
+    ok = res.ok;
   } catch {
-    return false;
+    ok = false;
   } finally {
     clearTimeout(t);
   }
+  healthCache.set(cacheKey, { ok, expiresAt: now + HEALTH_CACHE_TTL_MS });
+  return ok;
 };
 
 const tryParseJson = (raw: string): unknown => {

@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { CurrencyCode } from "@/types/design";
-import { CURRENCIES } from "@/constants/currencies";
 import { useResetTransactions } from "@/hooks/api";
+import { formatAmount, toMinor } from "@/utils/format";
 
 interface Props {
   currency: CurrencyCode;
@@ -150,13 +151,20 @@ export function ImportScreen({ currency }: Props) {
   const cancelRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resetMutation = useResetTransactions();
+  const router = useRouter();
 
-  const symbol = CURRENCIES[currency].symbol;
+  const closeImport = (): void => {
+    window.close();
+    setTimeout(() => {
+      if (!window.closed) router.back();
+    }, 50);
+  };
 
   const onFile = async (f: File): Promise<void> => {
     setFileName(f.name);
     setStats(null);
-    const text = await f.text();
+    const raw = await f.text();
+    const text = raw.replace(/^\uFEFF/, "");
     const matrix = parseCsv(text);
     const { rows: parsed, warnings: w, skipped: s } = mapRows(matrix);
     setRows(parsed);
@@ -284,7 +292,7 @@ export function ImportScreen({ currency }: Props) {
       <header className="mb-5 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => window.close()}
+          onClick={closeImport}
           className="font-mono text-[11px] uppercase tracking-wider"
           style={{ color: "var(--fgMuted)" }}
         >
@@ -374,14 +382,13 @@ export function ImportScreen({ currency }: Props) {
                   <span
                     className="tabular-nums"
                     style={{
-                      width: 80,
+                      width: 96,
                       textAlign: "right",
                       color: r.amount >= 0 ? "var(--pos)" : "var(--neg)",
                     }}
                   >
                     {r.amount >= 0 ? "+" : "−"}
-                    {symbol}
-                    {Math.abs(r.amount)}
+                    {formatAmount(toMinor(Math.abs(r.amount), currency), currency)}
                   </span>
                   <span className="truncate" style={{ color: "var(--fgDim)" }}>
                     {r.description}

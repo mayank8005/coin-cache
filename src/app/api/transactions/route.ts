@@ -3,6 +3,7 @@ import { CreateTransactionSchema, TransactionQuerySchema } from "@/utils/validat
 import { createTransaction, listTransactions } from "@/lib/repo";
 import { prisma } from "@/lib/db";
 import { ok, parseJson, withUser, bad } from "@/lib/api-helpers";
+export const dynamic = "force-dynamic";
 
 export const GET = (req: Request): Promise<NextResponse> =>
   withUser(async (u) => {
@@ -24,18 +25,12 @@ export const GET = (req: Request): Promise<NextResponse> =>
 export const POST = (req: Request): Promise<NextResponse> =>
   withUser(async (u) => {
     const input = await parseJson(req, CreateTransactionSchema);
-    try {
-      const created = await createTransaction(u.id, {
-        ...input,
-        note: input.note ?? "",
-        occurredAt: new Date(input.occurredAt),
-      });
-      return ok({ transaction: created }, { status: 201 });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Create failed";
-      if (msg.includes("not found")) return bad(msg, 404);
-      throw err;
-    }
+    const created = await createTransaction(u.id, {
+      ...input,
+      note: input.note ?? "",
+      occurredAt: new Date(input.occurredAt),
+    });
+    return ok({ transaction: created }, { status: 201 });
   });
 
 export const DELETE = (req: Request): Promise<NextResponse> =>

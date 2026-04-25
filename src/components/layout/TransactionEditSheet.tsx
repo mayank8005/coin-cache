@@ -48,10 +48,16 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
   const symbol = CURRENCIES[currency].symbol;
   const amountNum = Number(amountStr) || 0;
   const amountMinor = toMinor(amountNum, currency);
-  const canSave = amountMinor > 0 && !!catId && !!acctId && !update.isPending;
+  const occurredDate = occurredAtLocal ? new Date(occurredAtLocal) : null;
+  const occurredValid = occurredDate !== null && !Number.isNaN(occurredDate.getTime());
+  const canSave = amountMinor > 0 && !!catId && !!acctId && occurredValid && !update.isPending;
 
   const save = async (): Promise<void> => {
     setError(null);
+    if (!occurredValid || !occurredDate) {
+      setError("Invalid date");
+      return;
+    }
     try {
       await update.mutateAsync({
         id: txn.id,
@@ -60,7 +66,7 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
           categoryId: catId,
           amountMinor,
           note,
-          occurredAt: new Date(occurredAtLocal).toISOString(),
+          occurredAt: occurredDate.toISOString(),
           kind,
           flagged,
         },

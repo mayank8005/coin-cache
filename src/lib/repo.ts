@@ -2,6 +2,7 @@ import { prisma } from "./db";
 import { newId } from "@/utils/id";
 import { decryptForUser, encryptForUser } from "./crypto";
 import { monoCodeFrom } from "@/utils/format";
+import { NotFoundError } from "./api-helpers";
 import type { Prisma } from "@prisma/client";
 
 interface AccountDto {
@@ -193,8 +194,8 @@ export const createTransaction = async (
     prisma.account.findFirst({ where: { id: input.accountId, userId } }),
     prisma.category.findFirst({ where: { id: input.categoryId, userId } }),
   ]);
-  if (!acct) throw new Error("Account not found");
-  if (!cat) throw new Error("Category not found");
+  if (!acct) throw new NotFoundError("Account not found");
+  if (!cat) throw new NotFoundError("Category not found");
 
   const created = await prisma.transaction.create({
     data: {
@@ -231,11 +232,23 @@ export const updateTransaction = async (
     flagged: boolean;
   }>,
 ): Promise<TransactionDto | null> => {
-  const existing = await prisma.transaction.findFirst({ where: { id, userId } });
-  if (!existing) return null;
-  const updated = await prisma.transaction.update({
-    where: { id },
+  if (input.accountId || input.categoryId) {
+    const checks = await Promise.all([
+      input.accountId
+        ? prisma.account.findFirst({ where: { id: input.accountId, userId } })
+        : Promise.resolve(true),
+      input.categoryId
+        ? prisma.category.findFirst({ where: { id: input.categoryId, userId } })
+        : Promise.resolve(true),
+    ]);
+    if (!checks[0]) throw new NotFoundError("Account not found");
+    if (!checks[1]) throw new NotFoundError("Category not found");
+  }
+  const result = await prisma.transaction.updateMany({
+    where: { id, userId },
     data: input,
   });
-  return serialize(updated);
+  if (result.count === 0) return null;
+  const updated = await prisma.transaction.findFirst({ where: { id, userId } });
+  return updated ? serialize(updated) : null;
 };
