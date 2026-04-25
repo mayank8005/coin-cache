@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { CurrencyCode } from "@/types/design";
 import { CURRENCIES } from "@/constants/currencies";
+import { useResetTransactions } from "@/hooks/api";
 
 interface Props {
   currency: CurrencyCode;
@@ -143,8 +144,12 @@ export function ImportScreen({ currency }: Props) {
   const [stats, setStats] = useState<RunStats | null>(null);
   const [running, setRunning] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetText, setResetText] = useState("");
+  const [resetResult, setResetResult] = useState<string | null>(null);
   const cancelRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resetMutation = useResetTransactions();
 
   const symbol = CURRENCIES[currency].symbol;
 
@@ -238,6 +243,19 @@ export function ImportScreen({ currency }: Props) {
 
   const cancel = (): void => {
     cancelRef.current = true;
+  };
+
+  const confirmReset = async (): Promise<void> => {
+    if (resetText !== "reset") return;
+    setResetResult(null);
+    try {
+      const res = await resetMutation.mutateAsync();
+      setResetResult(`removed ${res.deleted} transactions`);
+      setResetMode(false);
+      setResetText("");
+    } catch (err) {
+      setResetResult(err instanceof Error ? err.message : "reset failed");
+    }
   };
 
   const progress = useMemo(() => {
@@ -401,7 +419,7 @@ export function ImportScreen({ currency }: Props) {
       ) : null}
 
       {/* Run controls */}
-      <div className="mb-4 flex gap-2">
+      <div className="mb-2 flex gap-2">
         <button
           type="button"
           onClick={start}
@@ -437,6 +455,83 @@ export function ImportScreen({ currency }: Props) {
           >
             Reset
           </button>
+        ) : null}
+      </div>
+
+      {/* Danger zone — wipe all transactions */}
+      <div className="mb-4">
+        {!resetMode ? (
+          <button
+            type="button"
+            onClick={() => {
+              setResetResult(null);
+              setResetMode(true);
+            }}
+            disabled={running || resetMutation.isPending}
+            className="w-full rounded-md py-2 font-mono text-[11px] uppercase tracking-wider disabled:opacity-50"
+            style={{
+              background: "transparent",
+              color: "var(--neg)",
+              border: "1px dashed var(--neg)",
+            }}
+          >
+            Reset all transactions
+          </button>
+        ) : (
+          <div
+            className="rounded-md p-3"
+            style={{ background: "var(--surface2)", border: "1px solid var(--neg)" }}
+          >
+            <div className="mb-2 font-mono text-[11px]" style={{ color: "var(--neg)" }}>
+              This will permanently delete every transaction on your account.
+              Accounts and categories are kept. Type <span className="font-bold">reset</span> to confirm.
+            </div>
+            <input
+              type="text"
+              value={resetText}
+              onChange={(e) => setResetText(e.target.value)}
+              placeholder="reset"
+              spellCheck={false}
+              autoComplete="off"
+              autoFocus
+              className="card-sunk mb-2 w-full px-3 py-2 font-mono text-[12px] outline-none"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={confirmReset}
+                disabled={resetText !== "reset" || resetMutation.isPending}
+                className="flex-1 rounded-md py-2 text-[12px] font-medium disabled:opacity-50"
+                style={{ background: "var(--neg)", color: "var(--bg)" }}
+              >
+                {resetMutation.isPending ? "Resetting…" : "Confirm reset"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setResetMode(false);
+                  setResetText("");
+                }}
+                disabled={resetMutation.isPending}
+                className="rounded-md px-4 py-2 text-[12px] font-medium disabled:opacity-50"
+                style={{
+                  background: "transparent",
+                  color: "var(--fgMuted)",
+                  border: "1px solid var(--lineStrong)",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {resetResult ? (
+          <p
+            className="mt-2 text-center font-mono text-[11px]"
+            style={{ color: resetResult.startsWith("removed") ? "var(--pos)" : "var(--neg)" }}
+          >
+            {resetResult}
+          </p>
         ) : null}
       </div>
 

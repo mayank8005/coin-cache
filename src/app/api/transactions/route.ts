@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { CreateTransactionSchema, TransactionQuerySchema } from "@/utils/validation";
 import { createTransaction, listTransactions } from "@/lib/repo";
+import { prisma } from "@/lib/db";
 import { ok, parseJson, withUser, bad } from "@/lib/api-helpers";
 
 export const GET = (req: Request): Promise<NextResponse> =>
@@ -35,4 +36,14 @@ export const POST = (req: Request): Promise<NextResponse> =>
       if (msg.includes("not found")) return bad(msg, 404);
       throw err;
     }
+  });
+
+export const DELETE = (req: Request): Promise<NextResponse> =>
+  withUser(async (u) => {
+    const url = new URL(req.url);
+    if (url.searchParams.get("confirm") !== "reset") {
+      return bad("missing confirm=reset", 400);
+    }
+    const result = await prisma.transaction.deleteMany({ where: { userId: u.id } });
+    return ok({ deleted: result.count });
   });

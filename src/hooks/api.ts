@@ -145,6 +145,15 @@ export const useDeleteTransaction = (): UseMutationResult<void, Error, string> =
   });
 };
 
+export const useResetTransactions = (): UseMutationResult<{ deleted: number }, Error, void> => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      api<{ deleted: number }>("/api/transactions?confirm=reset", { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transactions"] }),
+  });
+};
+
 export const useUpdateTransaction = (): UseMutationResult<
   TransactionDto,
   Error,
