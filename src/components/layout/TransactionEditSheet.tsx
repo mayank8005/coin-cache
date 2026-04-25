@@ -29,6 +29,7 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
   const [catId, setCatId] = useState(txn.categoryId);
   const [acctId, setAcctId] = useState(txn.accountId);
   const [occurredAtLocal, setOccurredAtLocal] = useState<string>(toLocalInput(txn.occurredAt));
+  const [flagged, setFlagged] = useState<boolean>(txn.flagged);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +62,7 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
           note,
           occurredAt: new Date(occurredAtLocal).toISOString(),
           kind,
+          flagged,
         },
       });
       onClose();
@@ -225,6 +227,38 @@ export function TransactionEditSheet({ txn, categories, accounts, currency, onCl
                 );
               })}
             </div>
+          </div>
+
+          {/* Flag */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setFlagged((v) => !v)}
+              className="flex w-full items-center justify-between rounded-md border px-3 py-2 text-[13px]"
+              style={{
+                background: flagged ? "var(--surface2)" : "transparent",
+                borderColor: flagged ? "var(--neg)" : "var(--line)",
+                color: flagged ? "var(--neg)" : "var(--fgMuted)",
+              }}
+              aria-pressed={flagged}
+            >
+              <span className="flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M5 3v18M5 4h11l-2 4 2 4H5"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill={flagged ? "currentColor" : "none"}
+                  />
+                </svg>
+                {flagged ? "Flagged" : "Flag for review"}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-wider">
+                {flagged ? "on" : "off"}
+              </span>
+            </button>
           </div>
 
           {error ? (
