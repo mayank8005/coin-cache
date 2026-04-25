@@ -28,6 +28,9 @@ export function LoginForm({ next, error }: Props) {
   const [hint, setHint] = useState<string | null>(error ? "try again" : null);
   const attemptingRef = useRef(false);
 
+  const PIN_MIN = 4;
+  const PIN_MAX = 10;
+
   useEffect(() => {
     void (async () => {
       const r = await fetch("/api/users");
@@ -43,45 +46,53 @@ export function LoginForm({ next, error }: Props) {
     [members, selectedId],
   );
 
-  useEffect(() => {
-    if (pin.length !== 4 || !selectedId || attemptingRef.current) return;
+  const attempt = async (candidate: string): Promise<void> => {
+    if (!selectedId || attemptingRef.current) return;
+    if (candidate.length < PIN_MIN || candidate.length > PIN_MAX) return;
     attemptingRef.current = true;
     setPending(true);
-    const attempt = async (): Promise<void> => {
-      const res = await signIn("credentials", {
-        userId: selectedId,
-        pin,
-        redirect: false,
-      });
-      if (!res || res.error) {
-        setShake(true);
-        setHint("try again");
-        setTimeout(() => {
-          setShake(false);
-          setPin("");
-          setPending(false);
-          attemptingRef.current = false;
-        }, 400);
-        return;
-      }
-      setUnlocked(true);
-      setHint("·· unlocking");
+    const res = await signIn("credentials", {
+      userId: selectedId,
+      pin: candidate,
+      redirect: false,
+    });
+    if (!res || res.error) {
+      setShake(true);
+      setHint("try again");
       setTimeout(() => {
-        router.replace(next && next.startsWith("/") ? next : "/");
-        router.refresh();
-      }, 240);
-    };
-    void attempt();
-  }, [pin, selectedId, next, router]);
+        setShake(false);
+        setPin("");
+        setPending(false);
+        attemptingRef.current = false;
+      }, 400);
+      return;
+    }
+    setUnlocked(true);
+    setHint("·· unlocking");
+    setTimeout(() => {
+      router.replace(next && next.startsWith("/") ? next : "/");
+      router.refresh();
+    }, 240);
+  };
+
+  useEffect(() => {
+    if (pin.length !== PIN_MAX) return;
+    void attempt(pin);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pin]);
 
   const addDigit = (d: string): void => {
-    if (pin.length >= 4 || unlocked || pending) return;
+    if (pin.length >= PIN_MAX || unlocked || pending) return;
     setPin((s) => s + d);
     setHint(null);
   };
   const delDigit = (): void => {
     if (unlocked) return;
     setPin((s) => s.slice(0, -1));
+  };
+  const submitPin = (): void => {
+    if (pin.length < PIN_MIN || pin.length > PIN_MAX || unlocked || pending) return;
+    void attempt(pin);
   };
 
   useEffect(() => {
@@ -94,26 +105,30 @@ export function LoginForm({ next, error }: Props) {
       } else if (e.key === "Backspace") {
         e.preventDefault();
         delDigit();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        submitPin();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, pin.length, unlocked, pending]);
+  }, [selectedId, pin, unlocked, pending]);
 
   const greeting = unlocked
     ? "·· unlocking"
-    : hint ?? (pin.length === 4 ? "checking" : "enter pin");
+    : hint ?? (pin.length === PIN_MAX ? "checking" : pin.length >= PIN_MIN ? "tap → to unlock" : "enter pin");
 
-  const dots = [0, 1, 2, 3].map((i) => {
+  const dotCount = Math.min(PIN_MAX, Math.max(PIN_MIN, pin.length));
+  const dots = Array.from({ length: dotCount }, (_, i) => {
     const filled = i < pin.length;
     return (
       <div
         key={i}
         className="transition-all"
         style={{
-          width: 14,
-          height: 14,
+          width: 12,
+          height: 12,
           borderRadius: "50%",
           background: filled ? (unlocked ? "var(--pos)" : "var(--fg)") : "transparent",
           border: `1.5px solid ${filled ? (unlocked ? "var(--pos)" : "var(--fg)") : "var(--lineStrong)"}`,
@@ -128,8 +143,9 @@ export function LoginForm({ next, error }: Props) {
     ["1", "2", "3"],
     ["4", "5", "6"],
     ["7", "8", "9"],
-    ["", "0", "⌫"],
+    ["→", "0", "⌫"],
   ] as const;
+  const canSubmit = pin.length >= PIN_MIN && pin.length <= PIN_MAX && !unlocked && !pending;
 
   return (
     <main
@@ -318,7 +334,6 @@ export function LoginForm({ next, error }: Props) {
 
         <div className="grid grid-cols-3 gap-2.5">
           {keys.flat().map((k, i) => {
-            if (k === "") return <div key={i} />;
             if (k === "⌫") {
               return (
                 <button
@@ -337,6 +352,30 @@ export function LoginForm({ next, error }: Props) {
                   }}
                 >
                   ⌫
+                </button>
+              );
+            }
+            if (k === "→") {
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={submitPin}
+                  disabled={!canSubmit}
+                  aria-label="Unlock"
+                  className="font-mono transition-opacity"
+                  style={{
+                    padding: "14px 0",
+                    borderRadius: 14,
+                    background: canSubmit ? "var(--accent)" : "transparent",
+                    border: `1px solid ${canSubmit ? "var(--accent)" : "var(--line)"}`,
+                    color: canSubmit ? "var(--accentInk)" : "var(--fgDim)",
+                    fontSize: 18,
+                    lineHeight: 1,
+                    opacity: canSubmit ? 1 : 0.5,
+                  }}
+                >
+                  →
                 </button>
               );
             }

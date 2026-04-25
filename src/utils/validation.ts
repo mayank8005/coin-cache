@@ -11,7 +11,7 @@ export const zVizStyle = z.enum(["rings", "pie"]);
 export const zChipStyle = z.enum(["rings", "pill", "block", "mono"]);
 export const zChipRep = z.enum(["mono", "icon"]);
 
-export const zPin = z.string().regex(/^\d{4}$/);
+export const zPin = z.string().regex(/^\d{4,10}$/);
 export const zRole = z.enum(["lead", "member", "shared"]);
 
 export const CreateUserSchema = z.object({

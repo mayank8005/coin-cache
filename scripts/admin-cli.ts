@@ -5,6 +5,7 @@
  *
  * Usage:
  *   pnpm admin user:add    --email a@b --pin 1234 --name 'Alex' [--role lead|member|shared] [--color '#6B2149']
+ *   (pin is 4-10 digits)
  *   pnpm admin user:list
  *   pnpm admin user:delete --email a@b   (or --id <cuid>)
  */
@@ -115,7 +116,7 @@ const usage = (): void => {
   console.info(`
 Coin Cache admin CLI
 
-  pnpm admin user:add --email <e> --pin <4digit> --name <name> [--role lead|member|shared] [--color '#hex']
+  pnpm admin user:add --email <e> --pin <4-10 digits> --name <name> [--role lead|member|shared] [--color '#hex']
   pnpm admin user:list
   pnpm admin user:delete (--email <e> | --id <id>)
 `);
@@ -134,11 +135,11 @@ const run = async (): Promise<void> => {
   if (cmd === "user:add") {
     const email = getStr(args.flags, "email") ?? (await prompt("email"));
     const name = getStr(args.flags, "name") ?? (await prompt("display name"));
-    const pin = getStr(args.flags, "pin") ?? (await prompt("4-digit pin", { mask: true }));
+    const pin = getStr(args.flags, "pin") ?? (await prompt("pin (4-10 digits)", { mask: true }));
     const role = getStr(args.flags, "role") ?? "member";
     const color = getStr(args.flags, "color") ?? undefined;
-    if (!/^\d{4}$/.test(pin)) {
-      console.error("pin must be exactly 4 digits");
+    if (!/^\d{4,10}$/.test(pin)) {
+      console.error("pin must be 4-10 digits");
       process.exit(1);
     }
     const res = await api<{ id: string; email: string }>({
