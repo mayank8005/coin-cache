@@ -30,6 +30,8 @@ export const DEFAULT_CATEGORIES: CategoryPreset[] = [
   { id: "gifts", label: "Gifts", mono: "Gi", iconId: "gifts", colorHex: "#E87B9C", kind: "expense" },
   { id: "subs", label: "Subs", mono: "Su", iconId: "subs", colorHex: "#7BCFE0", kind: "expense" },
   { id: "misc", label: "Misc", mono: "Mi", iconId: "misc", colorHex: "#C7C2B6", kind: "expense" },
+  { id: "income", label: "Salary", mono: "Sa", iconId: "misc", colorHex: "#2D7A3E", kind: "income" },
+  { id: "other_income", label: "Other", mono: "Ot", iconId: "misc", colorHex: "#7FAFE0", kind: "income" },
 ];
 
 export const DEFAULT_CATEGORY_SWATCHES = [

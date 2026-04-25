@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { chat, LlmOfflineError } from "@/lib/llm/client";
+import { chat, LlmOfflineError, userLlmConfig } from "@/lib/llm/client";
 import { anomaliesSystem } from "@/lib/llm/prompts";
 import { listTransactions, categoriesForUser } from "@/lib/repo";
 import { ok, withUser } from "@/lib/api-helpers";
@@ -63,6 +63,8 @@ export const POST = (): Promise<NextResponse> =>
         user: JSON.stringify(payload),
         schema: AnomaliesSchema,
         temperature: 0.1,
+        timeoutMs: 60_000,
+        config: userLlmConfig(u),
       });
       return ok({ offline: false, anomalies: result.anomalies });
     } catch (err) {

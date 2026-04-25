@@ -9,7 +9,6 @@ interface Props {
   totals: CategoryTotal[];
   size?: number;
   spentMinor: number;
-  budgetMinor: number;
   currency: CurrencyCode;
   style?: CSSProperties;
 }
@@ -23,21 +22,30 @@ const arc = (cx: number, cy: number, r: number, start: number, end: number): str
   return `M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2}`;
 };
 
-export function SegmentedRadial({ totals, size = 180, spentMinor, budgetMinor, currency, style }: Props) {
+export function SegmentedRadial({ totals, size = 180, spentMinor, currency, style }: Props) {
   const cx = size / 2;
   const cy = size / 2;
   const innerR = size * 0.26;
   const usable = size / 2 - innerR - 6;
-  const n = Math.max(1, totals.length);
-  const ringW = Math.max(3, Math.min(7, (usable - (n - 1) * 2) / n));
+  const nVis = Math.max(3, totals.length);
+  const ringW = Math.max(3, Math.min(7, (usable - (nVis - 1) * 2) / nVis));
   const gap = 2;
   const tones = ["var(--accent)", "var(--fg)", "var(--fgMuted)", "var(--fgDim)"];
-  const total = budgetMinor || totals.reduce((s, t) => s + Math.abs(t.amountMinor), 0) || 1;
+  const total = totals.reduce((s, t) => s + Math.abs(t.amountMinor), 0) || 1;
+
+  const empty = totals.length === 0;
+  const placeholder: CategoryTotal[] = empty
+    ? [
+        { id: "p1", label: "", mono: "", amountMinor: 0 },
+        { id: "p2", label: "", mono: "", amountMinor: 0 },
+        { id: "p3", label: "", mono: "", amountMinor: 0 },
+      ]
+    : totals;
 
   return (
     <div className="relative inline-block" style={{ width: size, height: size, ...style }}>
       <svg width={size} height={size}>
-        {totals.map((t, i) => {
+        {placeholder.map((t, i) => {
           const r = innerR + ringW / 2 + i * (ringW + gap);
           const frac = Math.min(1, Math.abs(t.amountMinor) / total);
           const start = -Math.PI / 2;
@@ -70,9 +78,8 @@ export function SegmentedRadial({ totals, size = 180, spentMinor, budgetMinor, c
         >
           {formatAmount(spentMinor, currency)}
         </span>
-        <span className="font-mono text-[10px] text-fg-dim">
-          {budgetMinor > 0 ? Math.round((spentMinor / budgetMinor) * 100) : 0}% of{" "}
-          {formatAmount(budgetMinor, currency, { fractionDigits: 0 })}
+        <span className="font-mono text-[10px] uppercase tracking-wider text-fg-dim">
+          {totals.length > 0 ? `${totals.length} categories` : "no spending yet"}
         </span>
       </div>
     </div>

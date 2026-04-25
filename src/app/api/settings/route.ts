@@ -14,6 +14,7 @@ export const PATCH = (req: Request): Promise<NextResponse> =>
         paletteId: true,
         vizStyle: true,
         chipStyle: true,
+        chipRep: true,
         currency: true,
       },
     });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { CreateUserSchema } from "@/utils/validation";
-import { hashPassword } from "@/lib/crypto";
+import { hashPin } from "@/lib/crypto";
 import { handle, bad, ok, parseJson } from "@/lib/api-helpers";
 import { AdminForbiddenError, requireAdmin } from "@/lib/admin-guard";
 import { seedDefaultsForUser } from "@/lib/seed-user";
@@ -25,9 +25,11 @@ export const POST = async (req: Request): Promise<NextResponse> =>
       data: {
         id,
         email: input.email,
-        passwordHash: await hashPassword(input.password),
+        pinHash: await hashPin(input.pin),
         displayName: input.displayName,
         initials: monoCodeFrom(input.displayName),
+        role: input.role,
+        ...(input.color ? { color: input.color } : {}),
       },
     });
     await seedDefaultsForUser(id);
@@ -44,7 +46,7 @@ export const GET = async (req: Request): Promise<NextResponse> =>
       throw e;
     }
     const users = await prisma.user.findMany({
-      select: { id: true, email: true, displayName: true, createdAt: true },
+      select: { id: true, email: true, displayName: true, role: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     });
     return ok({ users });

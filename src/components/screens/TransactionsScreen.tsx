@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AccountDto, CategoryDto, TransactionDto } from "@/lib/dto";
-import type { CurrencyCode } from "@/types/design";
+import type { ChipRep, CurrencyCode } from "@/types/design";
 import { TxnRow } from "@/components/primitives/TxnRow";
 import { BottomDock } from "@/components/layout/BottomDock";
 import { useTransactions } from "@/hooks/api";
@@ -15,6 +15,7 @@ interface Props {
   categories: CategoryDto[];
   accounts: AccountDto[];
   currency: CurrencyCode;
+  chipRep: ChipRep;
 }
 
 type FilterKind = "all" | "expense" | "income" | "flagged";
@@ -24,6 +25,7 @@ export function TransactionsScreen({
   categories,
   accounts,
   currency,
+  chipRep,
 }: Props) {
   const router = useRouter();
   const [monthOffset, setMonthOffset] = useState(0);
@@ -77,7 +79,7 @@ export function TransactionsScreen({
   }, [monthOffset]);
 
   return (
-    <div className="relative min-h-dvh pb-28">
+    <div className="relative min-h-dvh pb-56">
       <header className="flex items-center justify-between px-4 pt-5 pb-3">
         <button
           type="button"
@@ -118,7 +120,7 @@ export function TransactionsScreen({
             className={cn(
               "shrink-0 rounded-pill border px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors duration-med",
               filter === k
-                ? "border-transparent bg-accent text-accent-ink"
+                ? "border-transparent bg-fg text-bg"
                 : "border-line-strong text-fg-muted",
             )}
           >
@@ -185,6 +187,8 @@ export function TransactionsScreen({
                       key={t.id}
                       categoryLabel={cat?.label ?? "Uncategorised"}
                       categoryMono={cat?.mono ?? "··"}
+                      categoryIconId={cat?.iconId ?? "misc"}
+                      rep={chipRep}
                       accountLabel={acct?.label ?? ""}
                       accountColor={acct?.colorHex ?? "var(--fgDim)"}
                       note={t.note}

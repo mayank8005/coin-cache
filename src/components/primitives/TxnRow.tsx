@@ -1,13 +1,15 @@
 "use client";
 
-import type { CurrencyCode } from "@/types/design";
+import type { ChipRep, CurrencyCode } from "@/types/design";
 import { Amount } from "./Amount";
 import { AIMark } from "./AIMark";
+import { CategoryIcon } from "./CategoryIcon";
 import { formatRelativeDate } from "@/utils/format";
 
 interface Props {
   categoryLabel: string;
   categoryMono: string;
+  categoryIconId: string;
   accountLabel: string;
   accountColor: string;
   note: string;
@@ -17,11 +19,13 @@ interface Props {
   ai?: boolean;
   aiConfidence?: number | null;
   currency: CurrencyCode;
+  rep?: ChipRep;
 }
 
 export function TxnRow({
   categoryLabel,
   categoryMono,
+  categoryIconId,
   accountLabel,
   accountColor,
   note,
@@ -31,12 +35,17 @@ export function TxnRow({
   ai,
   aiConfidence,
   currency,
+  rep = "mono",
 }: Props) {
   const signed = kind === "income" ? amountMinor : -amountMinor;
   return (
     <div className="flex items-center gap-3 border-b border-line py-2 pr-3 last:border-b-0">
-      <span className="font-mono text-[11px] uppercase tracking-wider text-fg-muted w-[28px]">
-        {categoryMono}
+      <span className="flex w-[28px] items-center justify-center text-fg-muted">
+        {rep === "icon" ? (
+          <CategoryIcon id={categoryIconId} size={18} />
+        ) : (
+          <span className="font-mono text-[11px] uppercase tracking-wider">{categoryMono}</span>
+        )}
       </span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] text-fg">

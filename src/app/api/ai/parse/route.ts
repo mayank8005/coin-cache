@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { chat, LlmOfflineError } from "@/lib/llm/client";
+import { chat, LlmOfflineError, userLlmConfig } from "@/lib/llm/client";
 import { nlParseSystem } from "@/lib/llm/prompts";
 import { NlParseSchema, ParsedTransactionSchema } from "@/utils/validation";
 import { accountsForUser, categoriesForUser } from "@/lib/repo";
@@ -9,11 +9,11 @@ import { handle, ok, parseJson, withUser } from "@/lib/api-helpers";
 const LlmOutputSchema = z.object({
   amountMinor: z.number().int().nonnegative(),
   categoryId: z.string(),
-  accountId: z.string().optional(),
+  accountId: z.string().optional().nullable(),
   note: z.string().optional().default(""),
   occurredAt: z.string(),
   kind: z.enum(["expense", "income"]),
-  confidence: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(1).optional().default(0.7),
 });
 
 export const POST = (req: Request): Promise<NextResponse> =>
@@ -26,6 +26,8 @@ export const POST = (req: Request): Promise<NextResponse> =>
         user: `User time: ${new Date().toISOString()}\nInput: ${text}`,
         schema: LlmOutputSchema,
         temperature: 0.2,
+        timeoutMs: 60_000,
+        config: userLlmConfig(u),
       });
       const normalized = ParsedTransactionSchema.safeParse({
         ...raw,

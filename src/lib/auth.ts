@@ -1,7 +1,7 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./db";
-import { verifyPassword } from "./crypto";
+import { verifyPin } from "./crypto";
 import { LoginSchema } from "@/utils/validation";
 import { env } from "./env";
 import { authConfig } from "./auth.config";
@@ -38,15 +38,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { type: "email" },
-        password: { type: "password" },
+        userId: { type: "text" },
+        pin: { type: "text" },
       },
       authorize: async (raw) => {
         const parsed = LoginSchema.safeParse(raw);
         if (!parsed.success) return null;
-        const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+        const user = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
         if (!user) return null;
-        const ok = await verifyPassword(user.passwordHash, parsed.data.password);
+        const ok = await verifyPin(user.pinHash, parsed.data.pin);
         if (!ok) return null;
         return {
           id: user.id,

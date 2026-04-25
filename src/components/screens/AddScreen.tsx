@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AccountDto, CategoryDto } from "@/lib/dto";
-import type { ChipStyle, CurrencyCode, TxnKind } from "@/types/design";
+import type { ChipRep, ChipStyle, CurrencyCode, TxnKind } from "@/types/design";
 import { CategoryChip } from "@/components/primitives/CategoryChip";
-import { formatAmount, toMinor } from "@/utils/format";
+import { CURRENCIES } from "@/constants/currencies";
+import { toMinor } from "@/utils/format";
 import { useCreateTransaction, useNlParse } from "@/hooks/api";
 import { cn } from "@/utils/cn";
 
@@ -15,23 +16,50 @@ interface Props {
   accounts: AccountDto[];
   currency: CurrencyCode;
   chipStyle: ChipStyle;
+  chipRep: ChipRep;
   llmConfigured: boolean;
 }
 
-export function AddScreen({ kind, categories, accounts, currency, chipStyle, llmConfigured }: Props) {
+const NUMPAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"] as const;
+
+export function AddScreen({ kind, categories, accounts, currency, chipStyle, chipRep, llmConfigured }: Props) {
   const router = useRouter();
-  const [amount, setAmount] = useState<number>(0);
+  const filteredCats = useMemo(() => categories.filter((c) => c.kind === kind), [categories, kind]);
+  const [amountStr, setAmountStr] = useState<string>("");
   const [note, setNote] = useState("");
-  const [catId, setCatId] = useState<string | null>(categories[0]?.id ?? null);
+  const [catId, setCatId] = useState<string | null>(filteredCats[0]?.id ?? null);
   const [acctId, setAcctId] = useState<string | null>(accounts[0]?.id ?? null);
   const [nlText, setNlText] = useState("");
+  const [showNl, setShowNl] = useState(false);
   const [aiFlag, setAiFlag] = useState<{ conf: number; source: "nl" } | null>(null);
 
   const create = useCreateTransaction();
   const parseNl = useNlParse();
 
-  const amountMinor = useMemo(() => toMinor(amount, currency), [amount, currency]);
+  const amountNum = useMemo(() => Number(amountStr) || 0, [amountStr]);
+  const amountMinor = useMemo(() => toMinor(amountNum, currency), [amountNum, currency]);
   const canSubmit = amountMinor > 0 && catId && acctId && !create.isPending;
+  const symbol = CURRENCIES[currency].symbol;
+
+  const pressKey = (k: (typeof NUMPAD_KEYS)[number]): void => {
+    if (k === "⌫") {
+      setAmountStr((s) => s.slice(0, -1));
+      return;
+    }
+    if (k === ".") {
+      if (amountStr.includes(".")) return;
+      setAmountStr((s) => (s === "" ? "0." : s + "."));
+      return;
+    }
+    setAmountStr((s) => {
+      if (s.includes(".")) {
+        const [, dec = ""] = s.split(".");
+        if (dec.length >= 2) return s;
+      }
+      if (s === "0") return k;
+      return s + k;
+    });
+  };
 
   const submit = async (): Promise<void> => {
     if (!canSubmit || !catId || !acctId) return;
@@ -54,148 +82,175 @@ export function AddScreen({ kind, categories, accounts, currency, chipStyle, llm
     const res = await parseNl.mutateAsync({ text: nlText });
     if (res.offline || !res.parsed) return;
     const p = res.parsed;
-    setAmount(p.amountMinor / 100);
+    setAmountStr(String(p.amountMinor / 100));
     setNote(p.note ?? nlText);
     if (p.categoryId && categories.some((c) => c.id === p.categoryId)) setCatId(p.categoryId);
     if (p.accountId && accounts.some((a) => a.id === p.accountId)) setAcctId(p.accountId);
     setAiFlag({ conf: p.confidence, source: "nl" });
+    setShowNl(false);
   };
 
+  const displayAmount = amountStr === "" ? "0" : amountStr;
+  const signChar = kind === "expense" ? "\u2212" : "+";
+
   return (
-    <div className="min-h-dvh p-4">
-      <header className="mb-4 flex items-center justify-between">
+    <div className="flex min-h-dvh w-full max-w-full flex-col overflow-x-hidden">
+      {/* Header */}
+      <header className="flex items-center justify-between gap-2 px-4 pt-5 pb-2">
         <button
           type="button"
           onClick={() => router.back()}
           className="font-mono text-[11px] uppercase tracking-wider text-fg-muted"
         >
-          ← back
+          ← cancel
         </button>
-        <h1 className="font-display text-[16px] font-medium">
-          {kind === "expense" ? "Spend" : "Earn"}{" "}
-          <span className="font-mono text-[14px] text-fg-muted">
-            {formatAmount(amountMinor, currency)}
-          </span>
-        </h1>
-        <span className="w-12" />
-      </header>
-
-      {/* Amount */}
-      <div className="card mb-3 flex items-center gap-3 px-4 py-4">
-        <button
-          type="button"
-          onClick={() => setAmount((a) => Math.max(0, a - 1))}
-          className="h-9 w-9 rounded-pill border border-line-strong text-[18px]"
-        >
-          −
-        </button>
-        <input
-          type="number"
-          inputMode="decimal"
-          value={amount || ""}
-          onChange={(e) => setAmount(Number(e.target.value) || 0)}
-          placeholder="0"
-          className="flex-1 bg-transparent text-center font-mono font-medium tabular-nums outline-none"
-          style={{ fontSize: 42, letterSpacing: "-0.04em" }}
-        />
-        <button
-          type="button"
-          onClick={() => setAmount((a) => a + 1)}
-          className="h-9 w-9 rounded-pill border border-line-strong text-[18px]"
-        >
-          +
-        </button>
-      </div>
-
-      {/* Note */}
-      <input
-        type="text"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder={kind === "expense" ? "Lunch with Sara" : "Paycheck"}
-        className="card-sunk mb-4 w-full px-3 py-3 text-[14px] outline-none"
-      />
-
-      {/* Categories */}
-      <div className="mb-2 txt-mono-label">category</div>
-      <div className="mb-4 grid grid-cols-4 gap-3">
-        {categories.map((c) => (
-          <CategoryChip
-            key={c.id}
-            cat={c}
-            selected={catId === c.id}
-            onClick={() => {
-              setCatId(c.id);
-              setAiFlag(null);
-            }}
-            style={chipStyle}
-            size={60}
-          />
-        ))}
-      </div>
-
-      {/* Accounts */}
-      <div className="mb-2 txt-mono-label">account</div>
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-        {accounts.map((a) => (
-          <button
-            key={a.id}
-            type="button"
-            onClick={() => setAcctId(a.id)}
-            className={cn(
-              "flex shrink-0 items-center gap-2 rounded-pill border px-3 py-1.5 text-[12px] font-medium transition-colors duration-med",
-              acctId === a.id ? "border-transparent bg-accent text-accent-ink" : "border-line-strong text-fg",
-            )}
-          >
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ background: a.colorHex }}
-            />
-            {a.label}
-          </button>
-        ))}
-      </div>
-
-      {llmConfigured ? (
-        <div className="card-sunk mb-4 flex items-center gap-2 px-3 py-2">
-          <span className="font-mono text-[10px] uppercase text-fg-dim">··</span>
-          <input
-            type="text"
-            value={nlText}
-            onChange={(e) => setNlText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void runNl();
-            }}
-            placeholder='Try: "thai takeaway 22 on apr 18"'
-            className="flex-1 bg-transparent text-[12px] outline-none"
-          />
-          <button
-            type="button"
-            onClick={runNl}
-            disabled={parseNl.isPending}
-            className="font-mono text-[10px] uppercase tracking-wider text-fg-muted disabled:opacity-50"
-          >
-            {parseNl.isPending ? "parsing…" : "⌘K"}
-          </button>
-        </div>
-      ) : null}
-
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex-1 rounded-md border border-line-strong py-3 text-[14px] font-medium"
-        >
-          Cancel
-        </button>
+        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-dim">
+          {kind === "expense" ? "Expense" : "Income"}
+        </span>
         <button
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="flex-1 rounded-md bg-accent py-3 text-[14px] font-medium text-accent-ink disabled:opacity-50"
+          className="rounded-pill bg-accent px-3.5 py-1.5 text-[13px] font-medium text-accent-ink disabled:opacity-40"
         >
-          {create.isPending ? "Saving…" : kind === "expense" ? "Spend" : "Earn"}
+          {create.isPending ? "Saving…" : "Save"}
         </button>
+      </header>
+
+      {/* Amount hero */}
+      <div className="flex flex-col items-center gap-3 px-5 pt-4 pb-3">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-dim">
+          {kind === "expense" ? "Spend" : "Receive"}
+        </span>
+        <div
+          className="font-display font-medium tabular-nums"
+          style={{
+            fontSize: 56,
+            lineHeight: 1,
+            letterSpacing: "-0.05em",
+            color: kind === "income" ? "var(--pos)" : "var(--fg)",
+          }}
+        >
+          {signChar}
+          {symbol}
+          {displayAmount}
+        </div>
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="add a note…"
+          className="w-[70%] min-w-0 rounded-pill border border-line bg-transparent px-4 py-1.5 text-center font-mono text-[12px] outline-none"
+        />
+      </div>
+
+      {/* Accounts */}
+      <div className="px-4 pt-1">
+        <div className="mb-1.5 txt-mono-label">account</div>
+        <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {accounts.map((a) => {
+            const sel = acctId === a.id;
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => setAcctId(a.id)}
+                className={cn(
+                  "flex shrink-0 items-center gap-2 rounded-pill border px-3 py-1.5 text-[12px] font-medium transition-colors duration-med",
+                  sel ? "border-transparent bg-fg text-bg" : "border-line-strong text-fg-muted",
+                )}
+              >
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ background: a.colorHex }}
+                />
+                {a.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* NL input (collapsible) */}
+      {llmConfigured ? (
+        showNl ? (
+          <div className="mx-4 mt-2 flex items-center gap-2 rounded-pill border border-line-strong px-3 py-1.5">
+            <span className="font-mono text-[10px] uppercase text-fg-dim">··</span>
+            <input
+              type="text"
+              autoFocus
+              value={nlText}
+              onChange={(e) => setNlText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void runNl();
+              }}
+              placeholder='e.g. "thai takeaway 22"'
+              className="min-w-0 flex-1 bg-transparent text-[12px] outline-none"
+            />
+            <button
+              type="button"
+              onClick={runNl}
+              disabled={parseNl.isPending}
+              className="font-mono text-[10px] uppercase tracking-wider text-fg-muted disabled:opacity-50"
+            >
+              {parseNl.isPending ? "…" : "go"}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowNl(true)}
+            className="mx-4 mt-2 self-start font-mono text-[10px] uppercase tracking-wider text-fg-dim"
+          >
+            ·· ask ai
+          </button>
+        )
+      ) : null}
+
+      {/* Categories */}
+      <div className="flex-1 overflow-y-auto px-4 pt-3 pb-2">
+        <div className="mb-2 txt-mono-label">category</div>
+        <div className="grid grid-cols-4 gap-x-2 gap-y-3">
+          {filteredCats.map((c) => (
+            <div key={c.id} className="flex justify-center">
+              <CategoryChip
+                cat={c}
+                selected={catId === c.id}
+                onClick={() => {
+                  setCatId(c.id);
+                  setAiFlag(null);
+                }}
+                style={chipStyle}
+                representation={chipRep}
+                size={54}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Numpad */}
+      <div
+        className="grid w-full grid-cols-3 gap-px"
+        style={{ background: "var(--line)", borderTop: "1px solid var(--line)" }}
+      >
+        {NUMPAD_KEYS.map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => pressKey(k)}
+            className="font-mono font-medium tabular-nums"
+            style={{
+              height: 52,
+              background: "var(--bg)",
+              color: "var(--fg)",
+              fontSize: 22,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {k}
+          </button>
+        ))}
       </div>
     </div>
   );

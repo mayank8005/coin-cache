@@ -6,17 +6,17 @@ import { sha256 } from "@noble/hashes/sha2";
 import { randomBytes } from "node:crypto";
 import { env } from "./env";
 
-export const hashPassword = (pw: string): Promise<string> =>
-  argon2.hash(pw, {
+export const hashPin = (pin: string): Promise<string> =>
+  argon2.hash(pin, {
     type: argon2.argon2id,
     memoryCost: 2 ** 16,
     timeCost: 3,
     parallelism: 1,
   });
 
-export const verifyPassword = async (hash: string, pw: string): Promise<boolean> => {
+export const verifyPin = async (hash: string, pin: string): Promise<boolean> => {
   try {
-    return await argon2.verify(hash, pw);
+    return await argon2.verify(hash, pin);
   } catch {
     return false;
   }

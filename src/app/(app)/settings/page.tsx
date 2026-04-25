@@ -9,7 +9,11 @@ export default async function SettingsPage() {
       paletteId={u.paletteId}
       vizStyle={u.vizStyle}
       chipStyle={u.chipStyle}
+      chipRep={u.chipRep}
       currency={u.currency}
+      llmBaseUrl={u.llmBaseUrl}
+      llmApiKey={u.llmApiKey}
+      llmModel={u.llmModel}
     />
   );
 }

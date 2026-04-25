@@ -9,7 +9,6 @@ interface Props {
   vizStyle: VizStyle;
   size?: number;
   spentMinor: number;
-  budgetMinor: number;
   currency: CurrencyCode;
 }
 

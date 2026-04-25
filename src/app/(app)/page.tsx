@@ -1,8 +1,7 @@
 import { requireUser } from "@/lib/session";
-import { prisma } from "@/lib/db";
 import { HomeScreen } from "@/components/screens/HomeScreen";
 import { listTransactions, categoriesForUser, accountsForUser } from "@/lib/repo";
-import { llmHealth } from "@/lib/llm/client";
+import { llmHealth, userLlmConfig } from "@/lib/llm/client";
 
 export default async function HomePage() {
   const u = await requireUser();
@@ -10,22 +9,22 @@ export default async function HomePage() {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [txns, cats, accts, user, aiOnline] = await Promise.all([
+  const [txns, cats, accts, aiOnline] = await Promise.all([
     listTransactions(u.id, { from: monthStart, limit: 500 }),
     categoriesForUser(u.id),
     accountsForUser(u.id),
-    prisma.user.findUnique({ where: { id: u.id }, select: { displayName: true } }),
-    llmHealth(),
+    llmHealth(userLlmConfig(u)),
   ]);
 
   return (
     <HomeScreen
-      displayName={user?.displayName ?? u.displayName}
+      displayName={u.displayName}
       transactions={txns}
       categories={cats}
       accounts={accts}
       currency={u.currency}
       vizStyle={u.vizStyle}
+      chipRep={u.chipRep}
       aiOnline={aiOnline}
     />
   );

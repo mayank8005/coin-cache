@@ -11,6 +11,7 @@ export type PaletteId =
 
 export type VizStyle = "rings" | "pie";
 export type ChipStyle = "rings" | "pill" | "block" | "mono";
+export type ChipRep = "mono" | "icon";
 export type CurrencyCode = "INR" | "USD";
 export type AccountKind = "current" | "credit" | "savings" | "cash";
 export type TxnKind = "expense" | "income";

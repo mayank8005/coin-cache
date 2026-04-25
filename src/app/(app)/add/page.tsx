@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/session";
 import { accountsForUser, categoriesForUser } from "@/lib/repo";
 import { AddScreen } from "@/components/screens/AddScreen";
-import { isLlmConfigured } from "@/lib/llm/client";
+import { isLlmConfigured, userLlmConfig } from "@/lib/llm/client";
 
 export default async function AddPage({
   searchParams,
@@ -20,7 +20,8 @@ export default async function AddPage({
       accounts={accts}
       currency={u.currency}
       chipStyle={u.chipStyle}
-      llmConfigured={isLlmConfigured()}
+      chipRep={u.chipRep}
+      llmConfigured={isLlmConfigured(userLlmConfig(u))}
     />
   );
 }

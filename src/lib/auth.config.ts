@@ -13,6 +13,7 @@ export const authConfig: NextAuthConfig = {
         pathname.startsWith("/api/auth") ||
         pathname.startsWith("/api/admin") ||
         pathname.startsWith("/api/health") ||
+        pathname === "/api/users" ||
         pathname.startsWith("/_next") ||
         pathname.startsWith("/icons") ||
         pathname.startsWith("/fonts") ||

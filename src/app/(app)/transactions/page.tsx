@@ -17,6 +17,7 @@ export default async function TransactionsPage() {
       categories={cats}
       accounts={accts}
       currency={u.currency}
+      chipRep={u.chipRep}
     />
   );
 }

@@ -8,12 +8,19 @@ export class LlmOfflineError extends Error {
   }
 }
 
+export interface LlmConfig {
+  baseUrl: string | null;
+  apiKey: string | null;
+  model: string | null;
+}
+
 interface ChatOptions<T> {
   system: string;
   user: string;
   schema?: ZodSchema<T>;
   temperature?: number;
   timeoutMs?: number;
+  config?: LlmConfig;
 }
 
 interface Message {
@@ -29,20 +36,56 @@ interface ChatResponse {
   choices: ChatChoice[];
 }
 
-export const isLlmConfigured = (): boolean => {
-  const base = env().LLM_BASE_URL;
-  return typeof base === "string" && base.length > 0;
+const resolveConfig = (override?: LlmConfig): LlmConfig => {
+  const e = env();
+  return {
+    baseUrl: override?.baseUrl ?? (e.LLM_BASE_URL || null),
+    apiKey: override?.apiKey ?? (e.LLM_API_KEY || null),
+    model: override?.model ?? (e.LLM_MODEL || null),
+  };
 };
 
-export const llmHealth = async (): Promise<boolean> => {
-  if (!isLlmConfigured()) return false;
+export const isLlmConfigured = (override?: LlmConfig): boolean => {
+  const cfg = resolveConfig(override);
+  return typeof cfg.baseUrl === "string" && cfg.baseUrl.length > 0;
+};
+
+export const listModels = async (override?: LlmConfig): Promise<string[]> => {
+  const cfg = resolveConfig(override);
+  if (!cfg.baseUrl) return [];
   const e = env();
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), e.LLM_HEALTH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${e.LLM_BASE_URL}/models`, {
+    const res = await fetch(`${cfg.baseUrl}/models`, {
       method: "GET",
-      headers: e.LLM_API_KEY ? { Authorization: `Bearer ${e.LLM_API_KEY}` } : {},
+      headers: cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {},
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return [];
+    const body = (await res.json()) as { data?: Array<{ id?: string }> };
+    if (!Array.isArray(body.data)) return [];
+    return body.data
+      .map((m) => (typeof m.id === "string" ? m.id : null))
+      .filter((id): id is string => id !== null)
+      .sort((a, b) => a.localeCompare(b));
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(t);
+  }
+};
+
+export const llmHealth = async (override?: LlmConfig): Promise<boolean> => {
+  const cfg = resolveConfig(override);
+  if (!cfg.baseUrl) return false;
+  const e = env();
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), e.LLM_HEALTH_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${cfg.baseUrl}/models`, {
+      method: "GET",
+      headers: cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {},
       signal: ctrl.signal,
     });
     return res.ok;
@@ -74,8 +117,8 @@ const tryParseJson = (raw: string): unknown => {
 };
 
 export async function chat<T>(opts: ChatOptions<T>): Promise<T extends unknown ? T : string> {
-  if (!isLlmConfigured()) throw new LlmOfflineError();
-  const e = env();
+  const cfg = resolveConfig(opts.config);
+  if (!cfg.baseUrl) throw new LlmOfflineError();
   const messages: Message[] = [
     { role: "system", content: opts.system },
     { role: "user", content: opts.user },
@@ -83,14 +126,14 @@ export async function chat<T>(opts: ChatOptions<T>): Promise<T extends unknown ?
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 20_000);
   try {
-    const res = await fetch(`${e.LLM_BASE_URL}/chat/completions`, {
+    const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(e.LLM_API_KEY ? { Authorization: `Bearer ${e.LLM_API_KEY}` } : {}),
+        ...(cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}),
       },
       body: JSON.stringify({
-        model: e.LLM_MODEL || "llama3.1:8b",
+        model: cfg.model || "llama3.1:8b",
         messages,
         temperature: opts.temperature ?? 0.2,
         ...(opts.schema ? { response_format: { type: "json_object" as const } } : {}),
@@ -112,3 +155,9 @@ export async function chat<T>(opts: ChatOptions<T>): Promise<T extends unknown ?
     clearTimeout(t);
   }
 }
+
+export const userLlmConfig = (u: {
+  llmBaseUrl: string | null;
+  llmApiKey: string | null;
+  llmModel: string | null;
+}): LlmConfig => ({ baseUrl: u.llmBaseUrl, apiKey: u.llmApiKey, model: u.llmModel });

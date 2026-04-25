@@ -16,7 +16,6 @@ interface Props {
   totals: CategoryTotal[];
   size?: number;
   spentMinor: number;
-  budgetMinor: number;
   currency: CurrencyCode;
   style?: CSSProperties;
 }
@@ -41,7 +40,7 @@ const annular = (
   return `M${x1},${y1} A${rOuter},${rOuter} 0 ${largeArc} 1 ${x2},${y2} L${x3},${y3} A${rInner},${rInner} 0 ${largeArc} 0 ${x4},${y4} Z`;
 };
 
-export function PieViz({ totals, size = 180, spentMinor, budgetMinor, currency, style }: Props) {
+export function PieViz({ totals, size = 180, spentMinor, currency, style }: Props) {
   const [hover, setHover] = useState<string | null>(null);
   const cx = size / 2;
   const cy = size / 2;
@@ -111,9 +110,8 @@ export function PieViz({ totals, size = 180, spentMinor, budgetMinor, currency, 
             >
               {formatAmount(spentMinor, currency)}
             </span>
-            <span className="font-mono text-[10px] text-fg-dim">
-              {budgetMinor > 0 ? Math.round((spentMinor / budgetMinor) * 100) : 0}% of{" "}
-              {formatAmount(budgetMinor, currency, { fractionDigits: 0 })}
+            <span className="font-mono text-[10px] uppercase tracking-wider text-fg-dim">
+              {totals.length > 0 ? `${totals.length} categories` : "no spending yet"}
             </span>
           </>
         )}

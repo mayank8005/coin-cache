@@ -15,7 +15,6 @@ export interface CategoryDto {
   iconId: string;
   colorHex: string;
   kind: string;
-  monthlyBudgetMinor: number | null;
 }
 
 export interface TransactionDto {

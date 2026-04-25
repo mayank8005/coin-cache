@@ -1,7 +1,7 @@
 import type { AccountDto, CategoryDto } from "@/lib/dto";
 
 export const nlParseSystem = (cats: CategoryDto[], accts: AccountDto[], currency: string): string => `
-You convert a short natural-language expense/income phrase into structured JSON for a budget app.
+You convert a short natural-language expense/income phrase into structured JSON for an expense-tracking app.
 
 Rules:
 - Output ONLY a JSON object, no prose, no fences.

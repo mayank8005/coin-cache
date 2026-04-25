@@ -4,7 +4,7 @@
  * the master password header. Mirrors what a curl script would do, but nicer.
  *
  * Usage:
- *   pnpm admin user:add    --email a@b --password '…' --name 'Alex'
+ *   pnpm admin user:add    --email a@b --pin 1234 --name 'Alex' [--role lead|member|shared] [--color '#6B2149']
  *   pnpm admin user:list
  *   pnpm admin user:delete --email a@b   (or --id <cuid>)
  */
@@ -115,7 +115,7 @@ const usage = (): void => {
   console.info(`
 Coin Cache admin CLI
 
-  pnpm admin user:add --email <e> --password <p> --name <name>
+  pnpm admin user:add --email <e> --pin <4digit> --name <name> [--role lead|member|shared] [--color '#hex']
   pnpm admin user:list
   pnpm admin user:delete (--email <e> | --id <id>)
 `);
@@ -134,11 +134,17 @@ const run = async (): Promise<void> => {
   if (cmd === "user:add") {
     const email = getStr(args.flags, "email") ?? (await prompt("email"));
     const name = getStr(args.flags, "name") ?? (await prompt("display name"));
-    const password = getStr(args.flags, "password") ?? (await prompt("password", { mask: true }));
+    const pin = getStr(args.flags, "pin") ?? (await prompt("4-digit pin", { mask: true }));
+    const role = getStr(args.flags, "role") ?? "member";
+    const color = getStr(args.flags, "color") ?? undefined;
+    if (!/^\d{4}$/.test(pin)) {
+      console.error("pin must be exactly 4 digits");
+      process.exit(1);
+    }
     const res = await api<{ id: string; email: string }>({
       method: "POST",
       path: "/api/admin/users",
-      body: { email, displayName: name, password },
+      body: { email, displayName: name, pin, role, ...(color ? { color } : {}) },
     });
     console.info(`created: ${res.email} (${res.id})`);
     return;

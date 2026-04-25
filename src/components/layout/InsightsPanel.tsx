@@ -25,7 +25,7 @@ export function InsightsPanel() {
         }}
       >
         <div className="txt-mono-label mb-2">insights · offline</div>
-        Configure an LLM endpoint to see weekly/monthly narratives. Your budget data stays local.
+        Configure an LLM endpoint to see weekly/monthly narratives. Your spending stays local.
       </div>
     );
   }

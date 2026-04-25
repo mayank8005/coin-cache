@@ -9,17 +9,28 @@ export const zAccountKind = z.enum(ACCOUNT_KINDS as unknown as [string, ...strin
 export const zTxnKind = z.enum(["expense", "income"]);
 export const zVizStyle = z.enum(["rings", "pie"]);
 export const zChipStyle = z.enum(["rings", "pill", "block", "mono"]);
+export const zChipRep = z.enum(["mono", "icon"]);
+
+export const zPin = z.string().regex(/^\d{4}$/);
+export const zRole = z.enum(["lead", "member", "shared"]);
 
 export const CreateUserSchema = z.object({
   email: z.string().email().toLowerCase(),
-  password: z.string().min(8).max(256),
+  pin: zPin,
   displayName: z.string().min(1).max(64),
+  role: zRole.optional().default("member"),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
 });
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 
 export const LoginSchema = z.object({
+  userId: z.string().min(1),
+  pin: zPin,
+});
+
+export const ResetPinSchema = z.object({
   email: z.string().email().toLowerCase(),
-  password: z.string().min(1),
+  pin: zPin,
 });
 
 export const CreateCategorySchema = z.object({
@@ -34,7 +45,6 @@ export const CreateCategorySchema = z.object({
     .max(4)
     .optional(),
   kind: zTxnKind,
-  monthlyBudgetMinor: z.number().int().nonnegative().nullable().optional(),
 });
 
 export const UpdateCategorySchema = CreateCategorySchema.partial();
@@ -80,15 +90,43 @@ export const TransactionQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(500).optional().default(100),
 });
 
+const zNullableUrl = z
+  .string()
+  .trim()
+  .max(512)
+  .transform((s) => (s === "" ? null : s))
+  .nullable()
+  .refine(
+    (s) => s === null || /^https?:\/\//i.test(s),
+    "must be an http(s) URL",
+  );
+
+const zNullableTrimmed = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((s) => (s === "" ? null : s))
+    .nullable();
+
 export const UpdateSettingsSchema = z
   .object({
     displayName: z.string().min(1).max(64),
     paletteId: zPaletteId,
     vizStyle: zVizStyle,
     chipStyle: zChipStyle,
+    chipRep: zChipRep,
     currency: zCurrency,
+    llmBaseUrl: zNullableUrl,
+    llmApiKey: zNullableTrimmed(512),
+    llmModel: zNullableTrimmed(128),
   })
   .partial();
+
+export const ListModelsSchema = z.object({
+  baseUrl: zNullableUrl,
+  apiKey: zNullableTrimmed(512).optional(),
+});
 
 export const NlParseSchema = z.object({
   text: z.string().min(1).max(400),
@@ -101,6 +139,6 @@ export const ParsedTransactionSchema = z.object({
   note: z.string().optional().default(""),
   occurredAt: z.string().datetime(),
   kind: zTxnKind,
-  confidence: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(1).optional().default(0.7),
 });
 export type ParsedTransaction = z.infer<typeof ParsedTransactionSchema>;

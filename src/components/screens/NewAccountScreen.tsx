@@ -52,7 +52,7 @@ export function NewAccountScreen() {
             onClick={() => setKind(k)}
             className={cn(
               "rounded-pill border py-2 text-[11px] font-mono uppercase tracking-wider transition-colors duration-med",
-              kind === k ? "border-transparent bg-accent text-accent-ink" : "border-line-strong text-fg-muted",
+              kind === k ? "border-transparent bg-fg text-bg" : "border-line-strong text-fg-muted",
             )}
           >
             {k}

@@ -5,9 +5,11 @@ import { getPalette, paletteCssVars } from "@/constants/palettes";
 import { Providers } from "./providers";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Coin Cache",
-  description: "Private, local-first household budget.",
+  description: "Private, local-first expense tracking.",
   manifest: "/manifest.webmanifest",
   applicationName: "Coin Cache",
   appleWebApp: {
@@ -25,7 +27,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#F2F0E6",
+  themeColor: "#F4F0F2",
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

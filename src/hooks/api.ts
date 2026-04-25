@@ -67,7 +67,6 @@ export const useCreateCategory = (): UseMutationResult<CategoryDto, Error, {
   iconId: string;
   colorHex: string;
   kind: "expense" | "income";
-  monthlyBudgetMinor?: number | null;
 }> => {
   const qc = useQueryClient();
   return useMutation({
@@ -155,13 +154,30 @@ export const useUpdateSettings = (): UseMutationResult<
     paletteId: string;
     vizStyle: "rings" | "pie";
     chipStyle: "rings" | "pill" | "block" | "mono";
+    chipRep: "mono" | "icon";
     currency: "INR" | "USD";
+    llmBaseUrl: string | null;
+    llmApiKey: string | null;
+    llmModel: string | null;
   }>
 > =>
   useMutation({
     mutationFn: async (input) =>
       api<{ settings: Record<string, string> }>("/api/settings", {
         method: "PATCH",
+        body: JSON.stringify(input),
+      }),
+  });
+
+export const useListLlmModels = (): UseMutationResult<
+  { models: string[] },
+  Error,
+  { baseUrl: string | null; apiKey: string | null }
+> =>
+  useMutation({
+    mutationFn: async (input) =>
+      api<{ models: string[] }>("/api/ai/models", {
+        method: "POST",
         body: JSON.stringify(input),
       }),
   });

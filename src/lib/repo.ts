@@ -69,7 +69,6 @@ interface CategoryDto {
   iconId: string;
   colorHex: string;
   kind: string;
-  monthlyBudgetMinor: number | null;
 }
 
 export const categoriesForUser = async (userId: string): Promise<CategoryDto[]> => {
@@ -84,7 +83,6 @@ export const categoriesForUser = async (userId: string): Promise<CategoryDto[]> 
     iconId: r.iconId,
     colorHex: r.colorHex,
     kind: r.kind,
-    monthlyBudgetMinor: r.monthlyBudgetMinor ?? null,
   }));
 };
 
@@ -96,7 +94,6 @@ export const createCategory = async (
     iconId: string;
     colorHex: string;
     kind: string;
-    monthlyBudgetMinor?: number | null;
   },
 ): Promise<CategoryDto> => {
   const created = await prisma.category.create({
@@ -108,7 +105,6 @@ export const createCategory = async (
       iconId: input.iconId,
       colorHex: input.colorHex,
       kind: input.kind,
-      monthlyBudgetMinor: input.monthlyBudgetMinor ?? null,
     },
   });
   return {
@@ -118,7 +114,6 @@ export const createCategory = async (
     iconId: created.iconId,
     colorHex: created.colorHex,
     kind: created.kind,
-    monthlyBudgetMinor: created.monthlyBudgetMinor ?? null,
   };
 };
 

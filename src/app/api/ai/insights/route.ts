@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { chat, LlmOfflineError } from "@/lib/llm/client";
+import { chat, LlmOfflineError, userLlmConfig } from "@/lib/llm/client";
 import { insightsSystem } from "@/lib/llm/prompts";
 import { listTransactions, categoriesForUser } from "@/lib/repo";
 import { formatAmount } from "@/utils/format";
@@ -68,6 +68,8 @@ export const GET = (req: Request): Promise<NextResponse> =>
         user: userMsg,
         schema: InsightSchema,
         temperature: 0.3,
+        timeoutMs: 90_000,
+        config: userLlmConfig(u),
       });
       const payload = { offline: false, ...raw };
       await prisma.insightCache.upsert({

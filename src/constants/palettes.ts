@@ -1,6 +1,6 @@
 import type { PaletteId, PaletteTokens } from "@/types/design";
 
-export const DEFAULT_PALETTE: PaletteId = "matcha";
+export const DEFAULT_PALETTE: PaletteId = "plum";
 
 export const PALETTES: Record<PaletteId, PaletteTokens> = {
   default: {

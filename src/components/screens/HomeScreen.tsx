@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import type { AccountDto, CategoryDto, TransactionDto } from "@/lib/dto";
-import type { CurrencyCode, VizStyle } from "@/types/design";
+import type { ChipRep, CurrencyCode, VizStyle } from "@/types/design";
 import { HeaderPill } from "@/components/layout/HeaderPill";
 import { BottomDock } from "@/components/layout/BottomDock";
 import { InsightsPanel } from "@/components/layout/InsightsPanel";
@@ -11,7 +11,6 @@ import { Amount } from "@/components/primitives/Amount";
 import { TxnRow } from "@/components/primitives/TxnRow";
 import { CategoryViz } from "@/components/viz/CategoryViz";
 import type { CategoryTotal } from "@/components/viz/PieViz";
-import { formatAmount } from "@/utils/format";
 
 interface Props {
   displayName: string;
@@ -20,6 +19,7 @@ interface Props {
   accounts: AccountDto[];
   currency: CurrencyCode;
   vizStyle: VizStyle;
+  chipRep: ChipRep;
   aiOnline: boolean;
 }
 
@@ -30,16 +30,15 @@ export function HomeScreen({
   accounts,
   currency,
   vizStyle,
+  chipRep,
   aiOnline,
 }: Props) {
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const acctMap = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
 
-  const { spent, income, budget, totals } = useMemo(() => {
+  const { spent, income, totals } = useMemo(() => {
     let s = 0;
     let i = 0;
-    let b = 0;
-    for (const c of categories) b += c.monthlyBudgetMinor ?? 0;
     const byCat = new Map<string, number>();
     for (const t of transactions) {
       if (t.kind === "expense") {
@@ -61,49 +60,47 @@ export function HomeScreen({
         };
       })
       .sort((a, b) => b.amountMinor - a.amountMinor);
-    return { spent: s, income: i, budget: b || Math.max(s * 1.1, 100_000), totals: catTotals };
-  }, [transactions, categories, catMap]);
+    return { spent: s, income: i, totals: catTotals };
+  }, [transactions, catMap]);
 
-  const left = Math.max(0, budget - spent);
-  const daysLeft = 30 - new Date().getDate();
-  const daily = daysLeft > 0 ? Math.round(left / daysLeft) : 0;
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const dayOfMonth = now.getDate();
 
   const recent = transactions.slice(0, 5);
 
+  const monthName = now.toLocaleString("en-US", { month: "long" });
+  const weekOfMonth = Math.ceil(now.getDate() / 7);
+  const period = `${monthName} · Week ${weekOfMonth}`;
+
   return (
-    <div className="relative min-h-dvh pb-28 lg:mx-auto lg:max-w-6xl">
-      <HeaderPill name={displayName} onlineAi={aiOnline} />
+    <div className="relative min-h-dvh pb-56 lg:mx-auto lg:max-w-6xl lg:pb-44" style={{ background: "var(--bg)", color: "var(--fg)" }}>
+      <HeaderPill name={displayName} period={period} onlineAi={aiOnline} />
 
       <div className="lg:grid lg:grid-cols-[1fr_1fr] lg:gap-6 lg:px-4">
-      {/* Hero */}
-      <section className="px-4 lg:px-0">
-        <div className="card px-4 py-5">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="txt-mono-label">left to spend · {daysLeft} days</div>
-              <div
-                className="mt-1 font-display font-medium tabular-nums"
-                style={{ fontSize: 48, letterSpacing: "-0.04em" }}
-              >
-                {formatAmount(left, currency)}
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-y-2 gap-x-4">
-                <Stat label="spent" value={formatAmount(spent, currency)} />
-                <Stat label="budget" value={formatAmount(budget, currency)} />
-                <Stat label="income" value={formatAmount(income, currency)} tone="pos" />
-                <Stat label="daily" value={formatAmount(daily, currency)} />
-              </div>
+      {/* Hero — viz + balance line (per design) */}
+      <section className="lg:px-0">
+        <div className="flex justify-center px-4 pb-1.5 pt-4">
+          <CategoryViz
+            totals={totals}
+            vizStyle={vizStyle}
+            size={248}
+            spentMinor={spent}
+            currency={currency}
+          />
+        </div>
+
+        <div className="flex items-baseline justify-between px-6 pb-3 pt-1">
+          <div>
+            <div className="txt-mono-label">Spent this month</div>
+            <Amount minor={spent} size={26} currency={currency} tone="fg" />
+            <div className="mt-0.5 txt-mono-label">
+              day {dayOfMonth} of {daysInMonth}
             </div>
-            <div className="pl-2">
-              <CategoryViz
-                totals={totals.length > 0 ? totals : [{ id: "none", label: "none", mono: "··", amountMinor: 1 }]}
-                vizStyle={vizStyle}
-                size={150}
-                spentMinor={spent}
-                budgetMinor={budget}
-                currency={currency}
-              />
-            </div>
+          </div>
+          <div className="text-right">
+            <div className="txt-mono-label">Income</div>
+            <Amount minor={income} size={26} currency={currency} tone="pos" />
           </div>
         </div>
       </section>
@@ -130,6 +127,8 @@ export function HomeScreen({
                   key={t.id}
                   categoryLabel={cat?.label ?? "Uncategorised"}
                   categoryMono={cat?.mono ?? "··"}
+                  categoryIconId={cat?.iconId ?? "misc"}
+                  rep={chipRep}
                   accountLabel={acct?.label ?? ""}
                   accountColor={acct?.colorHex ?? "var(--fgDim)"}
                   note={t.note}
@@ -152,21 +151,7 @@ export function HomeScreen({
         <InsightsPanel />
       </section>
 
-      <BottomDock />
-    </div>
-  );
-}
-
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "pos" }) {
-  return (
-    <div>
-      <div className="txt-mono-label">{label}</div>
-      <div
-        className="font-mono font-medium tabular-nums"
-        style={{ fontSize: 14, letterSpacing: "-0.03em", color: tone === "pos" ? "var(--pos)" : "var(--fg)" }}
-      >
-        {value}
-      </div>
+      <BottomDock aiOnline={aiOnline} />
     </div>
   );
 }

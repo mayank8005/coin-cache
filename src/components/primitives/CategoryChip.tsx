@@ -97,12 +97,22 @@ export function CategoryChip({
         className="flex w-full items-center justify-between border-b border-dashed border-line py-2 text-[13px] transition-opacity duration-med"
       >
         <span className="flex items-center gap-2">
-          <span className={cn("font-mono text-fg-muted", selected && "text-accent")}>
-            {selected ? "●" : "○"}
-          </span>
+          {representation === "icon" ? (
+            <span
+              className={cn("flex h-[14px] w-[14px] items-center justify-center", selected ? "text-accent" : "text-fg-muted")}
+            >
+              <CategoryIcon id={cat.iconId} size={14} />
+            </span>
+          ) : (
+            <span className={cn("font-mono text-fg-muted", selected && "text-accent")}>
+              {selected ? "●" : "○"}
+            </span>
+          )}
           <span className={selected ? "text-fg" : "text-fg-muted"}>{cat.label}</span>
         </span>
-        <span className="font-mono text-[11px] text-fg-dim">{cat.mono.toLowerCase()}</span>
+        {representation === "icon" ? null : (
+          <span className="font-mono text-[11px] text-fg-dim">{cat.mono.toLowerCase()}</span>
+        )}
       </button>
     );
   }

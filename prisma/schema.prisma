@@ -11,14 +11,19 @@ datasource db {
 model User {
   id           String   @id
   email        String   @unique
-  passwordHash String
+  pinHash      String
   displayName  String
   initials     String
-  color        String   @default("#3F6B3A")
-  paletteId    String   @default("matcha")
+  color        String   @default("#6B2149")
+  paletteId    String   @default("plum")
+  role         String   @default("member") // "lead" | "member" | "shared"
   vizStyle     String   @default("rings") // "rings" | "pie"
   chipStyle    String   @default("rings") // "rings" | "pill" | "block" | "mono"
+  chipRep      String   @default("mono") // "mono" | "icon"
   currency     String   @default("INR") // "INR" | "USD"
+  llmBaseUrl   String?
+  llmApiKey    String?
+  llmModel     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -56,7 +61,6 @@ model Category {
   iconId             String
   colorHex           String
   kind               String // "expense" | "income"
-  monthlyBudgetMinor Int?
   archived           Boolean  @default(false)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

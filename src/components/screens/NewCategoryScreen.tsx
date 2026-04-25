@@ -2,23 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CurrencyCode, TxnKind } from "@/types/design";
+import type { TxnKind } from "@/types/design";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_SWATCHES } from "@/constants/categories";
 import { useCreateCategory } from "@/hooks/api";
-import { monoCodeFrom, toMinor } from "@/utils/format";
+import { monoCodeFrom } from "@/utils/format";
 import { cn } from "@/utils/cn";
 
-interface Props {
-  currency: CurrencyCode;
-}
-
-export function NewCategoryScreen({ currency }: Props) {
+export function NewCategoryScreen() {
   const router = useRouter();
   const [label, setLabel] = useState("");
   const [iconId, setIconId] = useState<string>(CATEGORY_ICONS[0]);
   const [colorHex, setColorHex] = useState<string>(DEFAULT_CATEGORY_SWATCHES[0] ?? "#3F6B3A");
   const [kind, setKind] = useState<TxnKind>("expense");
-  const [budget, setBudget] = useState<number>(0);
   const create = useCreateCategory();
 
   const submit = async (): Promise<void> => {
@@ -29,7 +24,6 @@ export function NewCategoryScreen({ currency }: Props) {
       iconId,
       colorHex,
       kind,
-      monthlyBudgetMinor: budget > 0 ? toMinor(budget, currency) : null,
     });
     router.back();
     router.refresh();
@@ -58,7 +52,7 @@ export function NewCategoryScreen({ currency }: Props) {
             onClick={() => setKind(k)}
             className={cn(
               "flex-1 rounded-pill border py-2 text-[12px] font-mono uppercase tracking-wider transition-colors duration-med",
-              kind === k ? "border-transparent bg-accent text-accent-ink" : "border-line-strong text-fg-muted",
+              kind === k ? "border-transparent bg-fg text-bg" : "border-line-strong text-fg-muted",
             )}
           >
             {k}
@@ -108,19 +102,6 @@ export function NewCategoryScreen({ currency }: Props) {
           />
         ))}
       </div>
-
-      {kind === "expense" ? (
-        <>
-          <div className="mb-2 txt-mono-label">monthly budget (optional)</div>
-          <input
-            type="number"
-            value={budget || ""}
-            onChange={(e) => setBudget(Number(e.target.value) || 0)}
-            placeholder="0"
-            className="card-sunk mb-4 w-full px-3 py-3 font-mono text-[14px] outline-none"
-          />
-        </>
-      ) : null}
 
       <div className="flex gap-3">
         <button
