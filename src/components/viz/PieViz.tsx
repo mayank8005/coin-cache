@@ -20,6 +20,8 @@ interface Props {
   style?: CSSProperties;
 }
 
+const r3 = (n: number): string => n.toFixed(3);
+
 const annular = (
   cx: number,
   cy: number,
@@ -37,7 +39,7 @@ const annular = (
   const y3 = cy + rInner * Math.sin(end);
   const x4 = cx + rInner * Math.cos(start);
   const y4 = cy + rInner * Math.sin(start);
-  return `M${x1},${y1} A${rOuter},${rOuter} 0 ${largeArc} 1 ${x2},${y2} L${x3},${y3} A${rInner},${rInner} 0 ${largeArc} 0 ${x4},${y4} Z`;
+  return `M${r3(x1)},${r3(y1)} A${r3(rOuter)},${r3(rOuter)} 0 ${largeArc} 1 ${r3(x2)},${r3(y2)} L${r3(x3)},${r3(y3)} A${r3(rInner)},${r3(rInner)} 0 ${largeArc} 0 ${r3(x4)},${r3(y4)} Z`;
 };
 
 export function PieViz({ totals, size = 180, spentMinor, currency, style }: Props) {

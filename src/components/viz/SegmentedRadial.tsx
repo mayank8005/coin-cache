@@ -13,13 +13,15 @@ interface Props {
   style?: CSSProperties;
 }
 
+const r3 = (n: number): string => n.toFixed(3);
+
 const arc = (cx: number, cy: number, r: number, start: number, end: number): string => {
   const large = end - start > Math.PI ? 1 : 0;
   const x1 = cx + r * Math.cos(start);
   const y1 = cy + r * Math.sin(start);
   const x2 = cx + r * Math.cos(end);
   const y2 = cy + r * Math.sin(end);
-  return `M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2}`;
+  return `M${r3(x1)},${r3(y1)} A${r3(r)},${r3(r)} 0 ${large} 1 ${r3(x2)},${r3(y2)}`;
 };
 
 export function SegmentedRadial({ totals, size = 180, spentMinor, currency, style }: Props) {
