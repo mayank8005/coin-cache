@@ -188,6 +188,7 @@ export function HomeScreen({
 
       <BottomDock
         aiOnline={aiOnline}
+        transactions={transactions}
         categories={categories}
         accounts={accounts}
         currency={currency}

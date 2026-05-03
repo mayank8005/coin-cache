@@ -270,6 +270,7 @@ export function TransactionsScreen({
 
       <BottomDock
         aiOnline={aiOnline}
+        transactions={txns}
         categories={categories}
         accounts={accounts}
         currency={currency}

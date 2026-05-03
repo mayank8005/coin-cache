@@ -109,12 +109,16 @@ const buildQuery = (params?: TxnQueryParams): string => {
   return s ? `?${s}` : "";
 };
 
-export const useTransactions = (params?: TxnQueryParams): UseQueryResult<TransactionDto[]> =>
+export const useTransactions = (
+  params?: TxnQueryParams,
+  opts?: { enabled?: boolean },
+): UseQueryResult<TransactionDto[]> =>
   useQuery({
     queryKey: ["transactions", params],
     queryFn: async () =>
       (await api<{ transactions: TransactionDto[] }>(`/api/transactions${buildQuery(params)}`))
         .transactions,
+    enabled: opts?.enabled ?? true,
   });
 
 export const useCreateTransaction = (): UseMutationResult<
