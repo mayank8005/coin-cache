@@ -31,17 +31,17 @@ node -e 'require("bcryptjs").hash(process.argv[1], 12).then(console.log)' 'my-ma
 
 ## Environment
 
-| Key | Purpose | Required |
-| --- | --- | --- |
-| `AUTH_SECRET` | Session signing key (`openssl rand -base64 48`) | yes |
-| `ADMIN_PASSWORD_HASH` | bcrypt hash of master password (gate `/api/admin/*`) | yes |
-| `ADMIN_PASSWORD` | Plaintext for CLI; set only on operator machine | CLI only |
-| `ENCRYPTION_KEY` | 32+ char random, derives per-user AES-GCM keys | yes |
-| `DATABASE_URL` | Prisma DSN; Docker uses `file:/app/data/data.db` | yes |
-| `APP_URL` | Base URL used by CLI & links | yes |
-| `LLM_BASE_URL` | OpenAI-compat endpoint; blank = disabled | no |
-| `LLM_API_KEY` | Token for the LLM endpoint if required | no |
-| `LLM_MODEL` | Model id, e.g. `llama3.1:8b` | no |
+| Key                   | Purpose                                              | Required |
+| --------------------- | ---------------------------------------------------- | -------- |
+| `AUTH_SECRET`         | Session signing key (`openssl rand -base64 48`)      | yes      |
+| `ADMIN_PASSWORD_HASH` | bcrypt hash of master password (gate `/api/admin/*`) | yes      |
+| `ADMIN_PASSWORD`      | Plaintext for CLI; set only on operator machine      | CLI only |
+| `ENCRYPTION_KEY`      | 32+ char random, derives per-user AES-GCM keys       | yes      |
+| `DATABASE_URL`        | Prisma DSN; Docker uses `file:/app/data/data.db`     | yes      |
+| `APP_URL`             | Base URL used by CLI & links                         | yes      |
+| `LLM_BASE_URL`        | Legacy server-side AI endpoint; UI uses Settings     | no       |
+| `LLM_API_KEY`         | Legacy server-side AI token                          | no       |
+| `LLM_MODEL`           | Legacy server-side AI model id                       | no       |
 
 ## Admin CLI
 
@@ -62,13 +62,19 @@ curl -X POST "$APP_URL/api/admin/users" \
 
 ## LLM
 
+AI calls are made directly from the browser using each user's Settings values. Blank
+settings prefill to the client-side default `http://192.168.0.95:11434` with model
+`gemma4:e2b`; the app normalizes bare Ollama hosts to `/v1`.
+
 Works with any OpenAI-compatible `/v1/chat/completions`. Tested targets:
 
-- **Ollama** — `LLM_BASE_URL=http://localhost:11434/v1`, `LLM_MODEL=llama3.1:8b`, no API key.
-- **OpenAI** — `LLM_BASE_URL=https://api.openai.com/v1`, `LLM_API_KEY=sk-…`, `LLM_MODEL=gpt-4o-mini`.
+- **Ollama** — `http://192.168.0.95:11434` or `http://localhost:11434`, no API key.
+- **OpenRouter** — `https://openrouter.ai/api/v1`, API key required, model from your account.
 - **LM Studio** — point at its local `/v1`.
 
-When the endpoint is unreachable, NL input and insights return `{ offline: true }` and the UI shows the design's "offline" placeholders. Core CRUD keeps working.
+When the browser cannot reach the endpoint, NL input and insights show the design's
+offline placeholders. Core CRUD keeps working. For Ollama, set `OLLAMA_ORIGINS`
+so the browser origin is allowed.
 
 ## Themes
 

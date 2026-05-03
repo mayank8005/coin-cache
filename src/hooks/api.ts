@@ -33,13 +33,17 @@ export const useAccounts = (): UseQueryResult<AccountDto[]> =>
     queryFn: async () => (await api<{ accounts: AccountDto[] }>("/api/accounts")).accounts,
   });
 
-export const useCreateAccount = (): UseMutationResult<AccountDto, Error, {
-  label: string;
-  kind: string;
-  mono?: string;
-  last4?: string | null;
-  colorHex: string;
-}> => {
+export const useCreateAccount = (): UseMutationResult<
+  AccountDto,
+  Error,
+  {
+    label: string;
+    kind: string;
+    mono?: string;
+    last4?: string | null;
+    colorHex: string;
+  }
+> => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input) =>
@@ -57,17 +61,20 @@ export const useCreateAccount = (): UseMutationResult<AccountDto, Error, {
 export const useCategories = (): UseQueryResult<CategoryDto[]> =>
   useQuery({
     queryKey: ["categories"],
-    queryFn: async () =>
-      (await api<{ categories: CategoryDto[] }>("/api/categories")).categories,
+    queryFn: async () => (await api<{ categories: CategoryDto[] }>("/api/categories")).categories,
   });
 
-export const useCreateCategory = (): UseMutationResult<CategoryDto, Error, {
-  label: string;
-  mono?: string;
-  iconId: string;
-  colorHex: string;
-  kind: "expense" | "income";
-}> => {
+export const useCreateCategory = (): UseMutationResult<
+  CategoryDto,
+  Error,
+  {
+    label: string;
+    mono?: string;
+    iconId: string;
+    colorHex: string;
+    kind: "expense" | "income";
+  }
+> => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input) =>
@@ -106,22 +113,25 @@ export const useTransactions = (params?: TxnQueryParams): UseQueryResult<Transac
   useQuery({
     queryKey: ["transactions", params],
     queryFn: async () =>
-      (
-        await api<{ transactions: TransactionDto[] }>(`/api/transactions${buildQuery(params)}`)
-      ).transactions,
+      (await api<{ transactions: TransactionDto[] }>(`/api/transactions${buildQuery(params)}`))
+        .transactions,
   });
 
-export const useCreateTransaction = (): UseMutationResult<TransactionDto, Error, {
-  accountId: string;
-  categoryId: string;
-  amountMinor: number;
-  note?: string;
-  occurredAt: string;
-  kind: "expense" | "income";
-  aiCategorized?: boolean;
-  aiConfidence?: number | null;
-  flagged?: boolean;
-}> => {
+export const useCreateTransaction = (): UseMutationResult<
+  TransactionDto,
+  Error,
+  {
+    accountId: string;
+    categoryId: string;
+    amountMinor: number;
+    note?: string;
+    occurredAt: string;
+    kind: "expense" | "income";
+    aiCategorized?: boolean;
+    aiConfidence?: number | null;
+    flagged?: boolean;
+  }
+> => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input) =>
@@ -205,49 +215,4 @@ export const useUpdateSettings = (): UseMutationResult<
         method: "PATCH",
         body: JSON.stringify(input),
       }),
-  });
-
-export const useListLlmModels = (): UseMutationResult<
-  { models: string[] },
-  Error,
-  { baseUrl: string | null; apiKey: string | null }
-> =>
-  useMutation({
-    mutationFn: async (input) =>
-      api<{ models: string[] }>("/api/ai/models", {
-        method: "POST",
-        body: JSON.stringify(input),
-      }),
-  });
-
-// -------- AI --------
-export const useNlParse = (): UseMutationResult<
-  { parsed?: import("@/utils/validation").ParsedTransaction; offline?: boolean },
-  Error,
-  { text: string }
-> =>
-  useMutation({
-    mutationFn: async (input) =>
-      api<{
-        parsed?: import("@/utils/validation").ParsedTransaction;
-        offline?: boolean;
-      }>("/api/ai/parse", {
-        method: "POST",
-        body: JSON.stringify(input),
-      }),
-  });
-
-export const useInsights = (period: "week" | "month"): UseQueryResult<{
-  offline: boolean;
-  summary?: string;
-  narrative?: string;
-  callout?: string;
-}> =>
-  useQuery({
-    queryKey: ["insights", period],
-    queryFn: async () =>
-      api<{ offline: boolean; summary?: string; narrative?: string; callout?: string }>(
-        `/api/ai/insights?period=${period}`,
-      ),
-    staleTime: 5 * 60 * 1000,
   });

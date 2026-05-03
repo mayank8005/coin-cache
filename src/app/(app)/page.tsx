@@ -1,7 +1,6 @@
 import { requireUser } from "@/lib/session";
 import { HomeScreen } from "@/components/screens/HomeScreen";
 import { listTransactions, categoriesForUser, accountsForUser } from "@/lib/repo";
-import { llmHealth, userLlmConfig } from "@/lib/llm/client";
 
 export default async function HomePage() {
   const u = await requireUser();
@@ -9,11 +8,10 @@ export default async function HomePage() {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [txns, cats, accts, aiOnline] = await Promise.all([
+  const [txns, cats, accts] = await Promise.all([
     listTransactions(u.id, { from: monthStart, limit: 500 }),
     categoriesForUser(u.id),
     accountsForUser(u.id),
-    llmHealth(userLlmConfig(u)),
   ]);
 
   return (
@@ -25,7 +23,9 @@ export default async function HomePage() {
       currency={u.currency}
       vizStyle={u.vizStyle}
       chipRep={u.chipRep}
-      aiOnline={aiOnline}
+      llmBaseUrl={u.llmBaseUrl}
+      llmApiKey={u.llmApiKey}
+      llmModel={u.llmModel}
     />
   );
 }

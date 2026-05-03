@@ -18,6 +18,9 @@ export default async function TransactionsPage() {
       accounts={accts}
       currency={u.currency}
       chipRep={u.chipRep}
+      llmBaseUrl={u.llmBaseUrl}
+      llmApiKey={u.llmApiKey}
+      llmModel={u.llmModel}
     />
   );
 }

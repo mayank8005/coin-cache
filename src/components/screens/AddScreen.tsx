@@ -7,8 +7,9 @@ import type { ChipRep, ChipStyle, CurrencyCode, TxnKind } from "@/types/design";
 import { CategoryChip } from "@/components/primitives/CategoryChip";
 import { CURRENCIES } from "@/constants/currencies";
 import { toMinor } from "@/utils/format";
-import { useCreateTransaction, useNlParse } from "@/hooks/api";
+import { useCreateTransaction } from "@/hooks/api";
 import { cn } from "@/utils/cn";
+import { parseTransactionInBrowser } from "@/lib/llm/browser-client";
 
 interface Props {
   kind: TxnKind;
@@ -17,12 +18,24 @@ interface Props {
   currency: CurrencyCode;
   chipStyle: ChipStyle;
   chipRep: ChipRep;
-  llmConfigured: boolean;
+  llmBaseUrl: string | null;
+  llmApiKey: string | null;
+  llmModel: string | null;
 }
 
 const NUMPAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"] as const;
 
-export function AddScreen({ kind, categories, accounts, currency, chipStyle, chipRep, llmConfigured }: Props) {
+export function AddScreen({
+  kind,
+  categories,
+  accounts,
+  currency,
+  chipStyle,
+  chipRep,
+  llmBaseUrl,
+  llmApiKey,
+  llmModel,
+}: Props) {
   const router = useRouter();
   const filteredCats = useMemo(() => categories.filter((c) => c.kind === kind), [categories, kind]);
   const [amountStr, setAmountStr] = useState<string>("");
@@ -31,6 +44,7 @@ export function AddScreen({ kind, categories, accounts, currency, chipStyle, chi
   const [acctId, setAcctId] = useState<string | null>(accounts[0]?.id ?? null);
   const [nlText, setNlText] = useState("");
   const [showNl, setShowNl] = useState(false);
+  const [nlPending, setNlPending] = useState(false);
   const [aiFlag, setAiFlag] = useState<{ conf: number; source: "nl" } | null>(null);
   const [showAllCats, setShowAllCats] = useState(false);
   const CAT_COLLAPSE_LIMIT = 8;
@@ -45,7 +59,10 @@ export function AddScreen({ kind, categories, accounts, currency, chipStyle, chi
   }, [filteredCats, showAllCats, catId]);
 
   const create = useCreateTransaction();
-  const parseNl = useNlParse();
+  const llmSettings = useMemo(
+    () => ({ llmBaseUrl, llmApiKey, llmModel }),
+    [llmBaseUrl, llmApiKey, llmModel],
+  );
 
   const amountNum = useMemo(() => Number(amountStr) || 0, [amountStr]);
   const amountMinor = useMemo(() => toMinor(amountNum, currency), [amountNum, currency]);
@@ -89,16 +106,27 @@ export function AddScreen({ kind, categories, accounts, currency, chipStyle, chi
   };
 
   const runNl = async (): Promise<void> => {
-    if (!nlText.trim()) return;
-    const res = await parseNl.mutateAsync({ text: nlText });
-    if (res.offline || !res.parsed) return;
-    const p = res.parsed;
-    setAmountStr(String(p.amountMinor / 100));
-    setNote(p.note ?? nlText);
-    if (p.categoryId && categories.some((c) => c.id === p.categoryId)) setCatId(p.categoryId);
-    if (p.accountId && accounts.some((a) => a.id === p.accountId)) setAcctId(p.accountId);
-    setAiFlag({ conf: p.confidence, source: "nl" });
-    setShowNl(false);
+    const value = nlText.trim();
+    if (!value || nlPending) return;
+    setNlPending(true);
+    try {
+      const res = await parseTransactionInBrowser(llmSettings, {
+        text: value,
+        categories,
+        accounts,
+        currency,
+      });
+      if (res.offline || !res.parsed) return;
+      const p = res.parsed;
+      setAmountStr(String(p.amountMinor / 100));
+      setNote(p.note ?? value);
+      if (p.categoryId && categories.some((c) => c.id === p.categoryId)) setCatId(p.categoryId);
+      if (p.accountId && accounts.some((a) => a.id === p.accountId)) setAcctId(p.accountId);
+      setAiFlag({ conf: p.confidence, source: "nl" });
+      setShowNl(false);
+    } finally {
+      setNlPending(false);
+    }
   };
 
   const displayAmount = amountStr === "" ? "0" : amountStr;
@@ -183,40 +211,38 @@ export function AddScreen({ kind, categories, accounts, currency, chipStyle, chi
       </div>
 
       {/* NL input (collapsible) */}
-      {llmConfigured ? (
-        showNl ? (
-          <div className="mx-4 mt-2 flex items-center gap-2 rounded-pill border border-line-strong px-3 py-1.5">
-            <span className="font-mono text-[10px] uppercase text-fg-dim">··</span>
-            <input
-              type="text"
-              autoFocus
-              value={nlText}
-              onChange={(e) => setNlText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void runNl();
-              }}
-              placeholder='e.g. "thai takeaway 22"'
-              className="min-w-0 flex-1 bg-transparent text-[12px] outline-none"
-            />
-            <button
-              type="button"
-              onClick={runNl}
-              disabled={parseNl.isPending}
-              className="font-mono text-[10px] uppercase tracking-wider text-fg-muted disabled:opacity-50"
-            >
-              {parseNl.isPending ? "…" : "go"}
-            </button>
-          </div>
-        ) : (
+      {showNl ? (
+        <div className="mx-4 mt-2 flex items-center gap-2 rounded-pill border border-line-strong px-3 py-1.5">
+          <span className="font-mono text-[10px] uppercase text-fg-dim">··</span>
+          <input
+            type="text"
+            autoFocus
+            value={nlText}
+            onChange={(e) => setNlText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void runNl();
+            }}
+            placeholder='e.g. "thai takeaway 22"'
+            className="min-w-0 flex-1 bg-transparent text-[12px] outline-none"
+          />
           <button
             type="button"
-            onClick={() => setShowNl(true)}
-            className="mx-4 mt-2 self-start font-mono text-[10px] uppercase tracking-wider text-fg-dim"
+            onClick={runNl}
+            disabled={nlPending}
+            className="font-mono text-[10px] uppercase tracking-wider text-fg-muted disabled:opacity-50"
           >
-            ·· ask ai
+            {nlPending ? "…" : "go"}
           </button>
-        )
-      ) : null}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowNl(true)}
+          className="mx-4 mt-2 self-start font-mono text-[10px] uppercase tracking-wider text-fg-dim"
+        >
+          ·· ask ai
+        </button>
+      )}
 
       {/* Categories */}
       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-2">
@@ -244,9 +270,7 @@ export function AddScreen({ kind, categories, accounts, currency, chipStyle, chi
           {visibleCats.map((c) => (
             <div
               key={c.id}
-              className={
-                chipStyle === "pill" || chipStyle === "mono" ? "" : "flex justify-center"
-              }
+              className={chipStyle === "pill" || chipStyle === "mono" ? "" : "flex justify-center"}
             >
               <CategoryChip
                 cat={c}

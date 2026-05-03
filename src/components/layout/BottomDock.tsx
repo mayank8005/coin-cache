@@ -2,11 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { AccountDto, CategoryDto } from "@/lib/dto";
+import type { CurrencyCode } from "@/types/design";
 import { PlusMinusButton } from "@/components/primitives/PlusMinusButton";
-import { useNlParse, useCreateTransaction, useAccounts } from "@/hooks/api";
+import { useCreateTransaction, useAccounts } from "@/hooks/api";
+import { parseTransactionInBrowser, type BrowserLlmSettings } from "@/lib/llm/browser-client";
 
 interface Props {
   aiOnline?: boolean;
+  categories: CategoryDto[];
+  accounts: AccountDto[];
+  currency: CurrencyCode;
+  llmSettings: BrowserLlmSettings;
 }
 
 type Status = "idle" | "thinking" | "saved";
@@ -16,12 +23,17 @@ interface Feedback {
   msg: string;
 }
 
-export function BottomDock({ aiOnline = false }: Props) {
+export function BottomDock({
+  aiOnline = false,
+  categories,
+  accounts: initialAccounts,
+  currency,
+  llmSettings,
+}: Props) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const parse = useNlParse();
   const create = useCreateTransaction();
   const accounts = useAccounts();
   const timeoutsRef = useRef<Set<number>>(new Set());
@@ -61,7 +73,12 @@ export function BottomDock({ aiOnline = false }: Props) {
     setStatus("thinking");
     setFeedback(null);
     try {
-      const res = await parse.mutateAsync({ text: value });
+      const res = await parseTransactionInBrowser(llmSettings, {
+        text: value,
+        categories,
+        accounts: accounts.data ?? initialAccounts,
+        currency,
+      });
       if (res.offline) {
         setStatus("idle");
         showFeedback("warn", "AI endpoint unreachable — check Settings → AI endpoint");
@@ -73,7 +90,7 @@ export function BottomDock({ aiOnline = false }: Props) {
         return;
       }
       const p = res.parsed;
-      const fallbackAcct = accounts.data?.[0]?.id ?? "";
+      const fallbackAcct = accounts.data?.[0]?.id ?? initialAccounts[0]?.id ?? "";
       if (!p.accountId && !fallbackAcct) {
         setStatus("idle");
         showFeedback("error", "No account on file — create one in Settings → New account.");
@@ -209,7 +226,11 @@ export function BottomDock({ aiOnline = false }: Props) {
           </button>
         </form>
         <div className="flex items-center justify-between gap-4">
-          <PlusMinusButton kind="minus" size={64} onClick={() => router.push("/add?kind=expense")} />
+          <PlusMinusButton
+            kind="minus"
+            size={64}
+            onClick={() => router.push("/add?kind=expense")}
+          />
           <div
             className="flex flex-1 items-center justify-center gap-1.5 font-mono uppercase"
             style={{ fontSize: 10, color: "var(--fgDim)", letterSpacing: "0.14em" }}

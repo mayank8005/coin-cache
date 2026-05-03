@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AccountDto, CategoryDto, TransactionDto } from "@/lib/dto";
 import type { ChipRep, CurrencyCode } from "@/types/design";
@@ -10,6 +10,7 @@ import { TransactionEditSheet } from "@/components/layout/TransactionEditSheet";
 import { useTransactions } from "@/hooks/api";
 import { formatAmount, formatDayHeader } from "@/utils/format";
 import { cn } from "@/utils/cn";
+import { browserLlmHealth } from "@/lib/llm/browser-client";
 
 interface Props {
   initialTransactions: TransactionDto[];
@@ -17,6 +18,9 @@ interface Props {
   accounts: AccountDto[];
   currency: CurrencyCode;
   chipRep: ChipRep;
+  llmBaseUrl: string | null;
+  llmApiKey: string | null;
+  llmModel: string | null;
 }
 
 type FilterKind = "all" | "expense" | "income" | "flagged";
@@ -27,12 +31,34 @@ export function TransactionsScreen({
   accounts,
   currency,
   chipRep,
+  llmBaseUrl,
+  llmApiKey,
+  llmModel,
 }: Props) {
   const router = useRouter();
   const [monthOffset, setMonthOffset] = useState(0);
   const [filter, setFilter] = useState<FilterKind>("all");
   const [acctId, setAcctId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [aiOnline, setAiOnline] = useState(false);
+  const llmSettings = useMemo(
+    () => ({ llmBaseUrl, llmApiKey, llmModel }),
+    [llmBaseUrl, llmApiKey, llmModel],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    browserLlmHealth(llmSettings)
+      .then((online) => {
+        if (!cancelled) setAiOnline(online);
+      })
+      .catch(() => {
+        if (!cancelled) setAiOnline(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [llmSettings]);
 
   const { from, to, isCurrent } = useMemo(() => {
     const now = new Date();
@@ -242,7 +268,13 @@ export function TransactionsScreen({
         )}
       </section>
 
-      <BottomDock />
+      <BottomDock
+        aiOnline={aiOnline}
+        categories={categories}
+        accounts={accounts}
+        currency={currency}
+        llmSettings={llmSettings}
+      />
 
       {editingId
         ? (() => {

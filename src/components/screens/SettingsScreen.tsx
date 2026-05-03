@@ -7,8 +7,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ChipRep, ChipStyle, CurrencyCode, PaletteId, VizStyle } from "@/types/design";
 import { PALETTES } from "@/constants/palettes";
 import { CURRENCY_CODES } from "@/constants/currencies";
-import { useListLlmModels, useUpdateSettings } from "@/hooks/api";
+import { useUpdateSettings } from "@/hooks/api";
 import { cn } from "@/utils/cn";
+import {
+  DEFAULT_BROWSER_LLM_BASE_URL,
+  DEFAULT_BROWSER_LLM_MODEL,
+  listBrowserLlmModels,
+} from "@/lib/llm/browser-client";
 
 interface Props {
   displayName: string;
@@ -31,36 +36,40 @@ export function SettingsScreen(initial: Props) {
   const [chipStyle, setChipStyle] = useState<ChipStyle>(initial.chipStyle);
   const [chipRep, setChipRep] = useState<ChipRep>(initial.chipRep);
   const [currency, setCurrency] = useState<CurrencyCode>(initial.currency);
-  const [llmBaseUrl, setLlmBaseUrl] = useState(initial.llmBaseUrl ?? "");
+  const [llmBaseUrl, setLlmBaseUrl] = useState(initial.llmBaseUrl ?? DEFAULT_BROWSER_LLM_BASE_URL);
   const [llmApiKey, setLlmApiKey] = useState(initial.llmApiKey ?? "");
-  const [llmModel, setLlmModel] = useState(initial.llmModel ?? "");
+  const [llmModel, setLlmModel] = useState(initial.llmModel ?? DEFAULT_BROWSER_LLM_MODEL);
   const [status, setStatus] = useState<string | null>(null);
   const [models, setModels] = useState<string[]>([]);
   const [modelsStatus, setModelsStatus] = useState<"idle" | "loading" | "ok" | "fail">("idle");
   const update = useUpdateSettings();
-  const listModels = useListLlmModels();
-  const lastFetchedUrlRef = useRef<string | null>(null);
+  const lastFetchedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const url = llmBaseUrl.trim();
     if (!/^https?:\/\//i.test(url)) {
       setModels([]);
       setModelsStatus("idle");
-      lastFetchedUrlRef.current = null;
+      lastFetchedKeyRef.current = null;
       return;
     }
-    if (lastFetchedUrlRef.current === url) return;
-    lastFetchedUrlRef.current = url;
+    const apiKey = llmApiKey.trim() === "" ? null : llmApiKey.trim();
+    const fetchKey = `${url}::${apiKey ?? ""}`;
+    if (lastFetchedKeyRef.current === fetchKey) return;
+    lastFetchedKeyRef.current = fetchKey;
     setModelsStatus("loading");
     let cancelled = false;
-    listModels
-      .mutateAsync({ baseUrl: url, apiKey: llmApiKey.trim() === "" ? null : llmApiKey.trim() })
+    listBrowserLlmModels({
+      llmBaseUrl: url,
+      llmApiKey: apiKey,
+      llmModel,
+    })
       .then((res) => {
         if (cancelled) return;
-        setModels(res.models);
-        setModelsStatus(res.models.length > 0 ? "ok" : "fail");
-        if (res.models.length > 0 && llmModel.trim() === "") {
-          setLlmModel(res.models[0] ?? "");
+        setModels(res);
+        setModelsStatus(res.length > 0 ? "ok" : "fail");
+        if (res.length > 0 && llmModel.trim() === "") {
+          setLlmModel(res[0] ?? "");
         }
       })
       .catch(() => {
@@ -71,8 +80,7 @@ export function SettingsScreen(initial: Props) {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [llmBaseUrl]);
+  }, [llmApiKey, llmBaseUrl, llmModel]);
 
   const save = async (): Promise<void> => {
     setStatus(null);
@@ -84,9 +92,9 @@ export function SettingsScreen(initial: Props) {
         chipStyle,
         chipRep,
         currency,
-        llmBaseUrl: llmBaseUrl.trim() === "" ? null : llmBaseUrl.trim(),
+        llmBaseUrl: llmBaseUrl.trim() === "" ? DEFAULT_BROWSER_LLM_BASE_URL : llmBaseUrl.trim(),
         llmApiKey: llmApiKey.trim() === "" ? null : llmApiKey.trim(),
-        llmModel: llmModel.trim() === "" ? null : llmModel.trim(),
+        llmModel: llmModel.trim() === "" ? DEFAULT_BROWSER_LLM_MODEL : llmModel.trim(),
       });
       setStatus("saved");
       await queryClient.invalidateQueries();
@@ -167,7 +175,11 @@ export function SettingsScreen(initial: Props) {
             style={
               vizStyle === v
                 ? { background: "var(--fg)", color: "var(--bg)", border: "1px solid var(--fg)" }
-                : { background: "transparent", color: "var(--fgMuted)", border: "1px solid var(--lineStrong)" }
+                : {
+                    background: "transparent",
+                    color: "var(--fgMuted)",
+                    border: "1px solid var(--lineStrong)",
+                  }
             }
           >
             {v}
@@ -186,7 +198,11 @@ export function SettingsScreen(initial: Props) {
             style={
               chipStyle === v
                 ? { background: "var(--fg)", color: "var(--bg)", border: "1px solid var(--fg)" }
-                : { background: "transparent", color: "var(--fgMuted)", border: "1px solid var(--lineStrong)" }
+                : {
+                    background: "transparent",
+                    color: "var(--fgMuted)",
+                    border: "1px solid var(--lineStrong)",
+                  }
             }
           >
             {v}
@@ -205,7 +221,11 @@ export function SettingsScreen(initial: Props) {
             style={
               chipRep === v
                 ? { background: "var(--fg)", color: "var(--bg)", border: "1px solid var(--fg)" }
-                : { background: "transparent", color: "var(--fgMuted)", border: "1px solid var(--lineStrong)" }
+                : {
+                    background: "transparent",
+                    color: "var(--fgMuted)",
+                    border: "1px solid var(--lineStrong)",
+                  }
             }
           >
             {v}
@@ -224,7 +244,11 @@ export function SettingsScreen(initial: Props) {
             style={
               currency === c
                 ? { background: "var(--fg)", color: "var(--bg)", border: "1px solid var(--fg)" }
-                : { background: "transparent", color: "var(--fgMuted)", border: "1px solid var(--lineStrong)" }
+                : {
+                    background: "transparent",
+                    color: "var(--fgMuted)",
+                    border: "1px solid var(--lineStrong)",
+                  }
             }
           >
             {c}
@@ -237,7 +261,7 @@ export function SettingsScreen(initial: Props) {
         type="url"
         value={llmBaseUrl}
         onChange={(e) => setLlmBaseUrl(e.target.value)}
-        placeholder="http://localhost:11434/v1"
+        placeholder={DEFAULT_BROWSER_LLM_BASE_URL}
         spellCheck={false}
         autoComplete="off"
         className="card-sunk mb-3 w-full px-3 py-3 font-mono text-[12px] outline-none"
@@ -277,7 +301,7 @@ export function SettingsScreen(initial: Props) {
           type="text"
           value={llmModel}
           onChange={(e) => setLlmModel(e.target.value)}
-          placeholder="llama3.1:8b"
+          placeholder={DEFAULT_BROWSER_LLM_MODEL}
           spellCheck={false}
           autoComplete="off"
           className="card-sunk mb-3 w-full px-3 py-3 font-mono text-[12px] outline-none"
@@ -294,7 +318,8 @@ export function SettingsScreen(initial: Props) {
         className="card-sunk mb-2 w-full px-3 py-3 font-mono text-[12px] outline-none"
       />
       <p className="mb-6 font-mono text-[10px]" style={{ color: "var(--fgDim)" }}>
-        Works with Ollama, LM Studio, OpenAI, or any /v1-compatible endpoint. Leave blank to disable AI.
+        Works with Ollama, LM Studio, OpenRouter, or any /v1-compatible endpoint. Blank fields use
+        the LAN Ollama default.
       </p>
 
       <button
