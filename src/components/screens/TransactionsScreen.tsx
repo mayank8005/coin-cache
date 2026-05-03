@@ -42,7 +42,10 @@ export function TransactionsScreen({
   }, [monthOffset]);
 
   const query = useTransactions({ from, to, limit: 500 });
-  const txns = isCurrent && !query.data ? initialTransactions : query.data ?? [];
+  const txns = useMemo(
+    () => (isCurrent && !query.data ? initialTransactions : (query.data ?? [])),
+    [initialTransactions, isCurrent, query.data],
+  );
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const acctMap = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
@@ -98,7 +101,7 @@ export function TransactionsScreen({
         <button
           type="button"
           onClick={() => setMonthOffset((m) => m - 1)}
-          className="font-mono text-[14px] text-fg-muted"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface font-mono text-[20px] leading-none text-fg transition-colors duration-med hover:border-fg-muted"
           aria-label="Previous month"
         >
           ‹
@@ -128,7 +131,7 @@ export function TransactionsScreen({
           type="button"
           onClick={() => setMonthOffset((m) => Math.min(0, m + 1))}
           disabled={monthOffset >= 0}
-          className="font-mono text-[14px] text-fg-muted disabled:opacity-30"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface font-mono text-[20px] leading-none text-fg transition-colors duration-med hover:border-fg-muted disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Next month"
         >
           ›
@@ -161,7 +164,9 @@ export function TransactionsScreen({
             onClick={() => setAcctId(null)}
             className={cn(
               "shrink-0 rounded-pill border px-3 py-1.5 text-[11px] font-medium transition-colors duration-med",
-              acctId === null ? "border-transparent bg-surface2 text-fg" : "border-line-strong text-fg-muted",
+              acctId === null
+                ? "border-transparent bg-surface2 text-fg"
+                : "border-line-strong text-fg-muted",
             )}
           >
             all accounts
@@ -173,7 +178,9 @@ export function TransactionsScreen({
               onClick={() => setAcctId(a.id)}
               className={cn(
                 "flex shrink-0 items-center gap-2 rounded-pill border px-3 py-1.5 text-[11px] font-medium transition-colors duration-med",
-                acctId === a.id ? "border-transparent bg-surface2 text-fg" : "border-line-strong text-fg-muted",
+                acctId === a.id
+                  ? "border-transparent bg-surface2 text-fg"
+                  : "border-line-strong text-fg-muted",
               )}
             >
               <span
