@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { listModels } from "@/lib/llm/client";
 import { ListModelsSchema } from "@/utils/validation";
 import { ok, parseJson, withUser } from "@/lib/api-helpers";
@@ -6,11 +6,12 @@ import { ok, parseJson, withUser } from "@/lib/api-helpers";
 export const POST = (req: Request): Promise<NextResponse> =>
   withUser(async () => {
     const input = await parseJson(req, ListModelsSchema);
-    if (!input.baseUrl) return ok({ models: [] });
-    const models = await listModels({
-      baseUrl: input.baseUrl,
-      apiKey: input.apiKey ?? null,
-      model: null,
-    });
+    const models = input.baseUrl
+      ? await listModels({
+          baseUrl: input.baseUrl,
+          apiKey: input.apiKey ?? null,
+          model: null,
+        })
+      : await listModels();
     return ok({ models });
   });

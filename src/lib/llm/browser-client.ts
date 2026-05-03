@@ -7,8 +7,8 @@ import { ParsedTransactionSchema } from "@/utils/validation";
 import type { CurrencyCode } from "@/types/design";
 import { formatAmount } from "@/utils/format";
 
-export const DEFAULT_BROWSER_LLM_BASE_URL = "http://192.168.0.95:11434";
-export const DEFAULT_BROWSER_LLM_MODEL = "gemma4:e2b";
+export const DEFAULT_SERVER_LLM_MODEL = "qwen3.5:4b";
+export const BROWSER_LLM_BASE_URL_PLACEHOLDER = "https://your-ai-server.example/v1";
 
 export interface BrowserLlmSettings {
   llmBaseUrl: string | null;
@@ -74,16 +74,36 @@ export const normalizeBrowserLlmBaseUrl = (raw: string): string => {
 };
 
 export const browserLlmConfig = (settings: BrowserLlmSettings): BrowserLlmConfig => ({
-  baseUrl: normalizeBrowserLlmBaseUrl(settings.llmBaseUrl || DEFAULT_BROWSER_LLM_BASE_URL),
+  baseUrl: normalizeBrowserLlmBaseUrl(settings.llmBaseUrl ?? ""),
   apiKey: settings.llmApiKey?.trim() || null,
-  model: settings.llmModel?.trim() || DEFAULT_BROWSER_LLM_MODEL,
+  model: settings.llmModel?.trim() || DEFAULT_SERVER_LLM_MODEL,
 });
+
+export const isBrowserLlmConfigured = (settings: BrowserLlmSettings): boolean =>
+  (settings.llmBaseUrl?.trim() ?? "") !== "";
 
 const authHeaders = (cfg: BrowserLlmConfig): HeadersInit =>
   cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {};
 
+export const browserLlmAccessIssue = (baseUrl: string): string | null => {
+  if (typeof window === "undefined" || !window.isSecureContext) return null;
+  if (new URL(baseUrl).protocol !== "http:") return null;
+  return "HTTPS app cannot call an HTTP AI endpoint directly. Use HTTPS for the AI server, or open Coin Cache over HTTP.";
+};
+
 export const listBrowserLlmModels = async (settings: BrowserLlmSettings): Promise<string[]> => {
+  if (!isBrowserLlmConfigured(settings)) {
+    const res = await fetch("/api/ai/models", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ baseUrl: null, apiKey: null }),
+    });
+    if (!res.ok) throw new BrowserLlmOfflineError();
+    const body = (await res.json()) as { models?: string[] };
+    return Array.isArray(body.models) ? body.models : [];
+  }
   const cfg = browserLlmConfig(settings);
+  if (browserLlmAccessIssue(cfg.baseUrl)) throw new BrowserLlmOfflineError();
   const res = await fetch(`${cfg.baseUrl}/models`, { headers: authHeaders(cfg) });
   if (!res.ok) throw new BrowserLlmOfflineError();
   const body = (await res.json()) as { data?: Array<{ id?: string }> };
@@ -140,6 +160,7 @@ const chatJson = async <T>(
   const ctrl = new AbortController();
   const timeout = window.setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 25_000);
   try {
+    if (browserLlmAccessIssue(cfg.baseUrl)) throw new BrowserLlmOfflineError();
     const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -191,6 +212,7 @@ const streamChatJson = async <T>(
   let thinking = "";
 
   try {
+    if (browserLlmAccessIssue(cfg.baseUrl)) throw new BrowserLlmOfflineError();
     const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -289,6 +311,18 @@ export const parseTransactionInBrowser = async (
     currency: CurrencyCode;
   },
 ): Promise<{ parsed?: z.infer<typeof ParsedTransactionSchema>; offline?: boolean }> => {
+  if (!isBrowserLlmConfigured(settings)) {
+    const res = await fetch("/api/ai/parse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: input.text }),
+    });
+    if (!res.ok) return { offline: true };
+    return (await res.json()) as {
+      parsed?: z.infer<typeof ParsedTransactionSchema>;
+      offline?: boolean;
+    };
+  }
   try {
     const raw = await chatJson(settings, {
       system: nlParseSystem(input.categories, input.accounts, input.currency),
@@ -330,6 +364,12 @@ export const generateInsightsInBrowser = async (
     currency: CurrencyCode;
   },
 ): Promise<BrowserInsight> => {
+  if (!isBrowserLlmConfigured(settings)) {
+    const res = await fetch(`/api/ai/insights?period=${input.period}`);
+    if (!res.ok) return { offline: true };
+    return (await res.json()) as BrowserInsight;
+  }
+
   if (input.transactions.length === 0) {
     return { offline: false, summary: "No transactions yet.", narrative: "", callout: "" };
   }
@@ -411,6 +451,21 @@ export const askFinanceQuestionInBrowser = async (
     onContentDelta?: (delta: string) => void;
   },
 ): Promise<BrowserFinanceAnswer> => {
+  if (!isBrowserLlmConfigured(settings)) {
+    const res = await fetch("/api/ai/finance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question: input.question,
+        months: input.months,
+        from: input.from,
+        to: input.to,
+      }),
+    });
+    if (!res.ok) return { offline: true };
+    return (await res.json()) as BrowserFinanceAnswer;
+  }
+
   const catMap = new Map(input.categories.map((c) => [c.id, c.label]));
   const acctMap = new Map(input.accounts.map((a) => [a.id, a.label]));
   const categoryTotals = new Map<string, { expense: number; income: number }>();

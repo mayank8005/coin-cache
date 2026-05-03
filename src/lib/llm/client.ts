@@ -14,6 +14,8 @@ export interface LlmConfig {
   model: string | null;
 }
 
+export const DEFAULT_SERVER_LLM_MODEL = "qwen3.5:4b";
+
 interface ChatOptions<T> {
   system: string;
   user: string;
@@ -143,7 +145,7 @@ export async function chat<T>(opts: ChatOptions<T>): Promise<T extends unknown ?
         ...(cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}),
       },
       body: JSON.stringify({
-        model: cfg.model || "llama3.1:8b",
+        model: cfg.model || DEFAULT_SERVER_LLM_MODEL,
         messages,
         temperature: opts.temperature ?? 0.2,
         ...(opts.schema ? { response_format: { type: "json_object" as const } } : {}),

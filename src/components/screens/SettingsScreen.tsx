@@ -10,9 +10,11 @@ import { CURRENCY_CODES } from "@/constants/currencies";
 import { useUpdateSettings } from "@/hooks/api";
 import { cn } from "@/utils/cn";
 import {
-  DEFAULT_BROWSER_LLM_BASE_URL,
-  DEFAULT_BROWSER_LLM_MODEL,
+  BROWSER_LLM_BASE_URL_PLACEHOLDER,
+  DEFAULT_SERVER_LLM_MODEL,
+  browserLlmAccessIssue,
   listBrowserLlmModels,
+  normalizeBrowserLlmBaseUrl,
 } from "@/lib/llm/browser-client";
 
 interface Props {
@@ -36,9 +38,9 @@ export function SettingsScreen(initial: Props) {
   const [chipStyle, setChipStyle] = useState<ChipStyle>(initial.chipStyle);
   const [chipRep, setChipRep] = useState<ChipRep>(initial.chipRep);
   const [currency, setCurrency] = useState<CurrencyCode>(initial.currency);
-  const [llmBaseUrl, setLlmBaseUrl] = useState(initial.llmBaseUrl ?? DEFAULT_BROWSER_LLM_BASE_URL);
+  const [llmBaseUrl, setLlmBaseUrl] = useState(initial.llmBaseUrl ?? "");
   const [llmApiKey, setLlmApiKey] = useState(initial.llmApiKey ?? "");
-  const [llmModel, setLlmModel] = useState(initial.llmModel ?? DEFAULT_BROWSER_LLM_MODEL);
+  const [llmModel, setLlmModel] = useState(initial.llmModel ?? "");
   const [status, setStatus] = useState<string | null>(null);
   const [models, setModels] = useState<string[]>([]);
   const [modelsStatus, setModelsStatus] = useState<"idle" | "loading" | "ok" | "fail">("idle");
@@ -48,10 +50,21 @@ export function SettingsScreen(initial: Props) {
   useEffect(() => {
     const url = llmBaseUrl.trim();
     if (!/^https?:\/\//i.test(url)) {
-      setModels([]);
-      setModelsStatus("idle");
-      lastFetchedKeyRef.current = null;
-      return;
+      if (url !== "") {
+        setModels([]);
+        setModelsStatus("idle");
+        lastFetchedKeyRef.current = null;
+        return;
+      }
+    }
+    if (url !== "") {
+      const accessIssue = browserLlmAccessIssue(normalizeBrowserLlmBaseUrl(url));
+      if (accessIssue) {
+        setModels([]);
+        setModelsStatus("fail");
+        lastFetchedKeyRef.current = null;
+        return;
+      }
     }
     const apiKey = llmApiKey.trim() === "" ? null : llmApiKey.trim();
     const fetchKey = `${url}::${apiKey ?? ""}`;
@@ -60,7 +73,7 @@ export function SettingsScreen(initial: Props) {
     setModelsStatus("loading");
     let cancelled = false;
     listBrowserLlmModels({
-      llmBaseUrl: url,
+      llmBaseUrl: url === "" ? null : url,
       llmApiKey: apiKey,
       llmModel,
     })
@@ -68,7 +81,7 @@ export function SettingsScreen(initial: Props) {
         if (cancelled) return;
         setModels(res);
         setModelsStatus(res.length > 0 ? "ok" : "fail");
-        if (res.length > 0 && llmModel.trim() === "") {
+        if (url !== "" && res.length > 0 && llmModel.trim() === "") {
           setLlmModel(res[0] ?? "");
         }
       })
@@ -92,9 +105,9 @@ export function SettingsScreen(initial: Props) {
         chipStyle,
         chipRep,
         currency,
-        llmBaseUrl: llmBaseUrl.trim() === "" ? DEFAULT_BROWSER_LLM_BASE_URL : llmBaseUrl.trim(),
+        llmBaseUrl: llmBaseUrl.trim() === "" ? null : llmBaseUrl.trim(),
         llmApiKey: llmApiKey.trim() === "" ? null : llmApiKey.trim(),
-        llmModel: llmModel.trim() === "" ? DEFAULT_BROWSER_LLM_MODEL : llmModel.trim(),
+        llmModel: llmModel.trim() === "" ? null : llmModel.trim(),
       });
       setStatus("saved");
       await queryClient.invalidateQueries();
@@ -106,6 +119,14 @@ export function SettingsScreen(initial: Props) {
 
   const activePalette = PALETTES[paletteId];
   const paletteOptions = Object.values(PALETTES);
+  let aiAccessIssue: string | null = null;
+  try {
+    if (/^https?:\/\//i.test(llmBaseUrl.trim())) {
+      aiAccessIssue = browserLlmAccessIssue(normalizeBrowserLlmBaseUrl(llmBaseUrl));
+    }
+  } catch {
+    aiAccessIssue = null;
+  }
 
   return (
     <div className="min-h-dvh p-4" style={{ background: "var(--bg)", color: "var(--fg)" }}>
@@ -261,7 +282,7 @@ export function SettingsScreen(initial: Props) {
         type="url"
         value={llmBaseUrl}
         onChange={(e) => setLlmBaseUrl(e.target.value)}
-        placeholder={DEFAULT_BROWSER_LLM_BASE_URL}
+        placeholder={BROWSER_LLM_BASE_URL_PLACEHOLDER}
         spellCheck={false}
         autoComplete="off"
         className="card-sunk mb-3 w-full px-3 py-3 font-mono text-[12px] outline-none"
@@ -272,13 +293,19 @@ export function SettingsScreen(initial: Props) {
           {modelsStatus === "loading"
             ? "loading…"
             : modelsStatus === "ok"
-              ? `${models.length} available`
-              : modelsStatus === "fail" && llmBaseUrl.trim() !== ""
-                ? "endpoint unreachable"
-                : ""}
+              ? llmBaseUrl.trim() === ""
+                ? `VPS Ollama ready`
+                : `${models.length} available`
+              : aiAccessIssue
+                ? "blocked by browser"
+                : modelsStatus === "fail" && llmBaseUrl.trim() !== ""
+                  ? "endpoint unreachable"
+                  : modelsStatus === "fail"
+                    ? "VPS Ollama unreachable"
+                    : ""}
         </span>
       </div>
-      {models.length > 0 ? (
+      {llmBaseUrl.trim() !== "" && models.length > 0 ? (
         <select
           value={models.includes(llmModel) ? llmModel : ""}
           onChange={(e) => setLlmModel(e.target.value)}
@@ -301,7 +328,7 @@ export function SettingsScreen(initial: Props) {
           type="text"
           value={llmModel}
           onChange={(e) => setLlmModel(e.target.value)}
-          placeholder={DEFAULT_BROWSER_LLM_MODEL}
+          placeholder={llmBaseUrl.trim() === "" ? DEFAULT_SERVER_LLM_MODEL : "model id"}
           spellCheck={false}
           autoComplete="off"
           className="card-sunk mb-3 w-full px-3 py-3 font-mono text-[12px] outline-none"
@@ -318,8 +345,8 @@ export function SettingsScreen(initial: Props) {
         className="card-sunk mb-2 w-full px-3 py-3 font-mono text-[12px] outline-none"
       />
       <p className="mb-6 font-mono text-[10px]" style={{ color: "var(--fgDim)" }}>
-        Works with Ollama, LM Studio, OpenRouter, or any /v1-compatible endpoint. Blank fields use
-        the LAN Ollama default.
+        {aiAccessIssue ??
+          `Leave AI fields empty to use VPS Ollama with ${DEFAULT_SERVER_LLM_MODEL}. Enter an endpoint to call a custom OpenAI-compatible server directly from this browser.`}
       </p>
 
       <button

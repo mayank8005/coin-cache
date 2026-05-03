@@ -10,6 +10,11 @@ services:
       - .env
     environment:
       DATABASE_URL: file:/app/data/data.db
+      LLM_BASE_URL: http://host.docker.internal:11434/v1
+      LLM_MODEL: qwen3.5:4b
+      LLM_API_KEY: ""
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - coin-cache-data:/app/data
     healthcheck:
